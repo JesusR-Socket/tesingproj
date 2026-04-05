@@ -15,6 +15,27 @@ namespace GenshinImpactMovementSystem
         {
             base.Enter();
 
+            bool isFastMovingJump =
+                stateMachine.ReusableData.ShouldSprint ||
+                (stateMachine.ReusableData.MovementInput != Vector2.zero &&
+                 !stateMachine.ReusableData.ShouldWalk);
+
+            // Всегда включаем общий старт прыжка
+            StartAnimation(stateMachine.Player.AnimationData.JumpParameterHash);
+
+            // Отдельно отмечаем быстрый прыжок из Run/Sprint
+            if (isFastMovingJump)
+            {
+                StartAnimation(stateMachine.Player.AnimationData.MovingJumpParameterHash);
+            }
+            else
+            {
+                StopAnimation(stateMachine.Player.AnimationData.MovingJumpParameterHash);
+            }
+
+            // На всякий случай снимаем fall
+            StopAnimation(stateMachine.Player.AnimationData.FallParameterHash);
+
             stateMachine.ReusableData.MovementSpeedModifier = 0f;
             stateMachine.ReusableData.MovementDecelerationForce = airborneData.JumpData.DecelerationForce;
             stateMachine.ReusableData.RotationData = airborneData.JumpData.RotationData;
@@ -26,8 +47,10 @@ namespace GenshinImpactMovementSystem
 
         public override void Exit()
         {
-            base.Exit();
+            StopAnimation(stateMachine.Player.AnimationData.JumpParameterHash);
+            StopAnimation(stateMachine.Player.AnimationData.MovingJumpParameterHash);
 
+            base.Exit();
             SetBaseRotationData();
             canStartFalling = false;
         }
@@ -72,6 +95,7 @@ namespace GenshinImpactMovementSystem
 
             jumpForce.x *= jumpDirection.x;
             jumpForce.z *= jumpDirection.z;
+
             jumpForce = GetJumpForceOnSlope(jumpForce);
 
             ResetVelocity();

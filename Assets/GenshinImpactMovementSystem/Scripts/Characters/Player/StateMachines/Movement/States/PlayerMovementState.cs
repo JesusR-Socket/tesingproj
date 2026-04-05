@@ -38,6 +38,7 @@ namespace GenshinImpactMovementSystem
 
         public virtual void Update()
         {
+            UpdateAimLocomotionBlendTree();
         }
 
         public virtual void PhysicsUpdate()
@@ -50,7 +51,6 @@ namespace GenshinImpactMovementSystem
             if (stateMachine.Player.LayerData.IsGroundLayer(collider.gameObject.layer))
             {
                 OnContactWithGround(collider);
-
                 return;
             }
         }
@@ -60,7 +60,6 @@ namespace GenshinImpactMovementSystem
             if (stateMachine.Player.LayerData.IsGroundLayer(collider.gameObject.layer))
             {
                 OnContactWithGroundExited(collider);
-
                 return;
             }
         }
@@ -80,7 +79,6 @@ namespace GenshinImpactMovementSystem
         private void InitializeData()
         {
             SetBaseCameraRecenteringData();
-
             SetBaseRotationData();
         }
 
@@ -93,8 +91,8 @@ namespace GenshinImpactMovementSystem
         protected void SetBaseRotationData()
         {
             stateMachine.ReusableData.RotationData = groundedData.BaseRotationData;
-
-            stateMachine.ReusableData.TimeToReachTargetRotation = stateMachine.ReusableData.RotationData.TargetRotationReachTime;
+            stateMachine.ReusableData.TimeToReachTargetRotation =
+                stateMachine.ReusableData.RotationData.TargetRotationReachTime;
         }
 
         protected void StartAnimation(int animationHash)
@@ -110,9 +108,7 @@ namespace GenshinImpactMovementSystem
         protected virtual void AddInputActionsCallbacks()
         {
             stateMachine.Player.Input.PlayerActions.WalkToggle.started += OnWalkToggleStarted;
-
             stateMachine.Player.Input.PlayerActions.Look.started += OnMouseMovementStarted;
-
             stateMachine.Player.Input.PlayerActions.Movement.performed += OnMovementPerformed;
             stateMachine.Player.Input.PlayerActions.Movement.canceled += OnMovementCanceled;
         }
@@ -120,9 +116,7 @@ namespace GenshinImpactMovementSystem
         protected virtual void RemoveInputActionsCallbacks()
         {
             stateMachine.Player.Input.PlayerActions.WalkToggle.started -= OnWalkToggleStarted;
-
             stateMachine.Player.Input.PlayerActions.Look.started -= OnMouseMovementStarted;
-
             stateMachine.Player.Input.PlayerActions.Movement.performed -= OnMovementPerformed;
             stateMachine.Player.Input.PlayerActions.Movement.canceled -= OnMovementCanceled;
         }
@@ -149,40 +143,43 @@ namespace GenshinImpactMovementSystem
 
         private void ReadMovementInput()
         {
-            stateMachine.ReusableData.MovementInput = stateMachine.Player.Input.PlayerActions.Movement.ReadValue<Vector2>();
+            stateMachine.ReusableData.MovementInput =
+                stateMachine.Player.Input.PlayerActions.Movement.ReadValue<Vector2>();
         }
 
         private void Move()
         {
-            if (stateMachine.ReusableData.MovementInput == Vector2.zero || stateMachine.ReusableData.MovementSpeedModifier == 0f)
+            if (stateMachine.ReusableData.MovementInput == Vector2.zero ||
+                stateMachine.ReusableData.MovementSpeedModifier == 0f)
             {
                 return;
             }
 
             Vector3 movementDirection = GetMovementInputDirection();
-
             float targetRotationYAngle = Rotate(movementDirection);
-
             Vector3 targetRotationDirection = GetTargetRotationDirection(targetRotationYAngle);
-
             float movementSpeed = GetMovementSpeed();
-
             Vector3 currentPlayerHorizontalVelocity = GetPlayerHorizontalVelocity();
 
-            stateMachine.Player.Rigidbody.AddForce(targetRotationDirection * movementSpeed - currentPlayerHorizontalVelocity, ForceMode.VelocityChange);
+            stateMachine.Player.Rigidbody.AddForce(
+                targetRotationDirection * movementSpeed - currentPlayerHorizontalVelocity,
+                ForceMode.VelocityChange
+            );
         }
 
         protected Vector3 GetMovementInputDirection()
         {
-            return new Vector3(stateMachine.ReusableData.MovementInput.x, 0f, stateMachine.ReusableData.MovementInput.y);
+            return new Vector3(
+                stateMachine.ReusableData.MovementInput.x,
+                0f,
+                stateMachine.ReusableData.MovementInput.y
+            );
         }
 
         private float Rotate(Vector3 direction)
         {
             float directionAngle = UpdateTargetRotation(direction);
-
             RotateTowardsTargetRotation();
-
             return directionAngle;
         }
 
@@ -217,7 +214,28 @@ namespace GenshinImpactMovementSystem
 
         private float AddCameraRotationToAngle(float angle)
         {
-            angle += stateMachine.Player.MainCameraTransform.eulerAngles.y;
+            float yaw;
+
+            if (stateMachine.Player.CombatIntentController != null &&
+                stateMachine.Player.CombatIntentController.IsAimHeld)
+            {
+                Vector3 intent = stateMachine.Player.CombatIntentController.IntentFacing;
+
+                if (intent.sqrMagnitude < 0.0001f)
+                {
+                    yaw = stateMachine.Player.transform.eulerAngles.y;
+                }
+                else
+                {
+                    yaw = Quaternion.LookRotation(intent.normalized, Vector3.up).eulerAngles.y;
+                }
+            }
+            else
+            {
+                yaw = stateMachine.Player.MainCameraTransform.eulerAngles.y;
+            }
+
+            angle += yaw;
 
             if (angle > 360f)
             {
@@ -230,12 +248,17 @@ namespace GenshinImpactMovementSystem
         private void UpdateTargetRotationData(float targetAngle)
         {
             stateMachine.ReusableData.CurrentTargetRotation.y = targetAngle;
-
             stateMachine.ReusableData.DampedTargetRotationPassedTime.y = 0f;
         }
 
         protected void RotateTowardsTargetRotation()
         {
+            if (stateMachine.Player.CombatIntentController != null &&
+                stateMachine.Player.CombatIntentController.IsAimHeld)
+            {
+                return;
+            }
+
             float currentYAngle = stateMachine.Player.Rigidbody.rotation.eulerAngles.y;
 
             if (currentYAngle == stateMachine.ReusableData.CurrentTargetRotation.y)
@@ -243,12 +266,17 @@ namespace GenshinImpactMovementSystem
                 return;
             }
 
-            float smoothedYAngle = Mathf.SmoothDampAngle(currentYAngle, stateMachine.ReusableData.CurrentTargetRotation.y, ref stateMachine.ReusableData.DampedTargetRotationCurrentVelocity.y, stateMachine.ReusableData.TimeToReachTargetRotation.y - stateMachine.ReusableData.DampedTargetRotationPassedTime.y);
+            float smoothedYAngle = Mathf.SmoothDampAngle(
+                currentYAngle,
+                stateMachine.ReusableData.CurrentTargetRotation.y,
+                ref stateMachine.ReusableData.DampedTargetRotationCurrentVelocity.y,
+                stateMachine.ReusableData.TimeToReachTargetRotation.y -
+                stateMachine.ReusableData.DampedTargetRotationPassedTime.y
+            );
 
             stateMachine.ReusableData.DampedTargetRotationPassedTime.y += Time.deltaTime;
 
             Quaternion targetRotation = Quaternion.Euler(0f, smoothedYAngle, 0f);
-
             stateMachine.Player.Rigidbody.MoveRotation(targetRotation);
         }
 
@@ -272,9 +300,7 @@ namespace GenshinImpactMovementSystem
         protected Vector3 GetPlayerHorizontalVelocity()
         {
             Vector3 playerHorizontalVelocity = stateMachine.Player.Rigidbody.linearVelocity;
-
             playerHorizontalVelocity.y = 0f;
-
             return playerHorizontalVelocity;
         }
 
@@ -301,7 +327,6 @@ namespace GenshinImpactMovementSystem
             if (movementInput == Vector2.up)
             {
                 DisableCameraRecentering();
-
                 return;
             }
 
@@ -316,15 +341,22 @@ namespace GenshinImpactMovementSystem
 
             if (movementInput == Vector2.down)
             {
-                SetCameraRecenteringState(cameraVerticalAngle, stateMachine.ReusableData.BackwardsCameraRecenteringData);
-
+                SetCameraRecenteringState(
+                    cameraVerticalAngle,
+                    stateMachine.ReusableData.BackwardsCameraRecenteringData
+                );
                 return;
             }
 
-            SetCameraRecenteringState(cameraVerticalAngle, stateMachine.ReusableData.SidewaysCameraRecenteringData);
+            SetCameraRecenteringState(
+                cameraVerticalAngle,
+                stateMachine.ReusableData.SidewaysCameraRecenteringData
+            );
         }
 
-        protected void SetCameraRecenteringState(float cameraVerticalAngle, List<PlayerCameraRecenteringData> cameraRecenteringData)
+        protected void SetCameraRecenteringState(
+            float cameraVerticalAngle,
+            List<PlayerCameraRecenteringData> cameraRecenteringData)
         {
             foreach (PlayerCameraRecenteringData recenteringData in cameraRecenteringData)
             {
@@ -334,7 +366,6 @@ namespace GenshinImpactMovementSystem
                 }
 
                 EnableCameraRecentering(recenteringData.WaitTime, recenteringData.RecenteringTime);
-
                 return;
             }
 
@@ -350,7 +381,12 @@ namespace GenshinImpactMovementSystem
                 movementSpeed = groundedData.BaseSpeed;
             }
 
-            stateMachine.Player.CameraRecenteringUtility.EnableRecentering(waitTime, recenteringTime, groundedData.BaseSpeed, movementSpeed);
+            stateMachine.Player.CameraRecenteringUtility.EnableRecentering(
+                waitTime,
+                recenteringTime,
+                groundedData.BaseSpeed,
+                movementSpeed
+            );
         }
 
         protected void DisableCameraRecentering()
@@ -366,7 +402,6 @@ namespace GenshinImpactMovementSystem
         protected void ResetVerticalVelocity()
         {
             Vector3 playerHorizontalVelocity = GetPlayerHorizontalVelocity();
-
             stateMachine.Player.Rigidbody.linearVelocity = playerHorizontalVelocity;
         }
 
@@ -374,21 +409,27 @@ namespace GenshinImpactMovementSystem
         {
             Vector3 playerHorizontalVelocity = GetPlayerHorizontalVelocity();
 
-            stateMachine.Player.Rigidbody.AddForce(-playerHorizontalVelocity * stateMachine.ReusableData.MovementDecelerationForce, ForceMode.Acceleration);
+            stateMachine.Player.Rigidbody.AddForce(
+                -playerHorizontalVelocity * stateMachine.ReusableData.MovementDecelerationForce,
+                ForceMode.Acceleration
+            );
         }
 
         protected void DecelerateVertically()
         {
             Vector3 playerVerticalVelocity = GetPlayerVerticalVelocity();
 
-            stateMachine.Player.Rigidbody.AddForce(-playerVerticalVelocity * stateMachine.ReusableData.MovementDecelerationForce, ForceMode.Acceleration);
+            stateMachine.Player.Rigidbody.AddForce(
+                -playerVerticalVelocity * stateMachine.ReusableData.MovementDecelerationForce,
+                ForceMode.Acceleration
+            );
         }
 
         protected bool IsMovingHorizontally(float minimumMagnitude = 0.1f)
         {
-            Vector3 playerHorizontaVelocity = GetPlayerHorizontalVelocity();
-
-            Vector2 playerHorizontalMovement = new Vector2(playerHorizontaVelocity.x, playerHorizontaVelocity.z);
+            Vector3 playerHorizontalVelocity = GetPlayerHorizontalVelocity();
+            Vector2 playerHorizontalMovement =
+                new Vector2(playerHorizontalVelocity.x, playerHorizontalVelocity.z);
 
             return playerHorizontalMovement.magnitude > minimumMagnitude;
         }
@@ -401,6 +442,82 @@ namespace GenshinImpactMovementSystem
         protected bool IsMovingDown(float minimumVelocity = 0.1f)
         {
             return GetPlayerVerticalVelocity().y < -minimumVelocity;
+        }
+
+        protected void UpdateAimLocomotionBlendTree()
+        {
+            bool isAimHeld =
+                stateMachine.Player.CombatIntentController != null &&
+                stateMachine.Player.CombatIntentController.IsAimHeld;
+
+            bool hasMovementInput = stateMachine.ReusableData.MovementInput != Vector2.zero;
+            bool useAimLocomotion = isAimHeld && hasMovementInput;
+
+            Animator animator = stateMachine.Player.Animator;
+
+            animator.SetBool(
+                stateMachine.Player.AnimationData.UseAimLocomotionParameterHash,
+                useAimLocomotion
+            );
+
+            if (!useAimLocomotion)
+            {
+                animator.SetFloat(stateMachine.Player.AnimationData.AimMoveXParameterHash, 0f);
+                animator.SetFloat(stateMachine.Player.AnimationData.AimMoveYParameterHash, 0f);
+                return;
+            }
+
+            Vector3 localInputDirection = GetMovementInputDirection();
+
+            float worldAngle = UpdateTargetRotation(localInputDirection);
+            Vector3 worldMoveDirection = GetTargetRotationDirection(worldAngle);
+            worldMoveDirection.y = 0f;
+
+            if (worldMoveDirection.sqrMagnitude < 0.0001f)
+            {
+                animator.SetFloat(stateMachine.Player.AnimationData.AimMoveXParameterHash, 0f);
+                animator.SetFloat(stateMachine.Player.AnimationData.AimMoveYParameterHash, 0f);
+                return;
+            }
+
+            worldMoveDirection.Normalize();
+
+            Vector3 triangleForward = stateMachine.Player.CombatIntentController.CharacterFacing;
+            triangleForward.y = 0f;
+
+            if (triangleForward.sqrMagnitude < 0.0001f)
+            {
+                triangleForward = stateMachine.Player.transform.forward;
+                triangleForward.y = 0f;
+            }
+
+            triangleForward.Normalize();
+
+            float signedAngle = Vector3.SignedAngle(triangleForward, worldMoveDirection, Vector3.up);
+
+            float aimMoveX = 0f;
+            float aimMoveY = 0f;
+
+            // 4 жёстких сектора вместо плавного смешивания
+            if (signedAngle >= -45f && signedAngle <= 45f)
+            {
+                aimMoveY = 1f;      // Forward
+            }
+            else if (signedAngle > 45f && signedAngle < 135f)
+            {
+                aimMoveX = 1f;      // Right
+            }
+            else if (signedAngle < -45f && signedAngle > -135f)
+            {
+                aimMoveX = -1f;     // Left
+            }
+            else
+            {
+                aimMoveY = -1f;     // Back
+            }
+
+            animator.SetFloat(stateMachine.Player.AnimationData.AimMoveXParameterHash, aimMoveX);
+            animator.SetFloat(stateMachine.Player.AnimationData.AimMoveYParameterHash, aimMoveY);
         }
     }
 }

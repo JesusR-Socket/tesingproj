@@ -134,7 +134,7 @@ namespace GenshinImpactMovementSystem
                     ""name"": ""Dash"",
                     ""type"": ""Button"",
                     ""id"": ""3a08fe1b-9bf9-4d09-b4c2-6df4d4fa3fff"",
-                    ""expectedControlType"": ""Button"",
+                    ""expectedControlType"": """",
                     ""processors"": """",
                     ""interactions"": """",
                     ""initialStateCheck"": false
@@ -170,6 +170,15 @@ namespace GenshinImpactMovementSystem
                     ""name"": ""Attack"",
                     ""type"": ""Button"",
                     ""id"": ""32740f40-efa0-4f57-a791-a99c29200817"",
+                    ""expectedControlType"": """",
+                    ""processors"": """",
+                    ""interactions"": """",
+                    ""initialStateCheck"": false
+                },
+                {
+                    ""name"": ""Aim"",
+                    ""type"": ""Button"",
+                    ""id"": ""967d2740-7d79-440e-a2b8-c998be1b8147"",
                     ""expectedControlType"": """",
                     ""processors"": """",
                     ""interactions"": """",
@@ -278,17 +287,6 @@ namespace GenshinImpactMovementSystem
                 },
                 {
                     ""name"": """",
-                    ""id"": ""cf8eb5b9-3f0a-4403-9480-e6090982ca30"",
-                    ""path"": ""<Mouse>/rightButton"",
-                    ""interactions"": """",
-                    ""processors"": """",
-                    ""groups"": """",
-                    ""action"": ""Dash"",
-                    ""isComposite"": false,
-                    ""isPartOfComposite"": false
-                },
-                {
-                    ""name"": """",
                     ""id"": ""9e48a1db-a15b-4594-9ec8-70f826bbc421"",
                     ""path"": ""<Keyboard>/leftShift"",
                     ""interactions"": """",
@@ -341,6 +339,17 @@ namespace GenshinImpactMovementSystem
                     ""action"": ""Attack"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""1dac71c1-9d36-4731-b742-59b4e6612548"",
+                    ""path"": ""<Mouse>/rightButton"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": """",
+                    ""action"": ""Aim"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
                 }
             ]
         }
@@ -358,6 +367,7 @@ namespace GenshinImpactMovementSystem
             m_Player_Jump = m_Player.FindAction("Jump", throwIfNotFound: true);
             m_Player_CursorToggle = m_Player.FindAction("CursorToggle", throwIfNotFound: true);
             m_Player_Attack = m_Player.FindAction("Attack", throwIfNotFound: true);
+            m_Player_Aim = m_Player.FindAction("Aim", throwIfNotFound: true);
         }
 
         ~@PlayerInputActions()
@@ -447,6 +457,7 @@ namespace GenshinImpactMovementSystem
         private readonly InputAction m_Player_Jump;
         private readonly InputAction m_Player_CursorToggle;
         private readonly InputAction m_Player_Attack;
+        private readonly InputAction m_Player_Aim;
         /// <summary>
         /// Provides access to input actions defined in input action map "Player".
         /// </summary>
@@ -494,6 +505,10 @@ namespace GenshinImpactMovementSystem
             /// Provides access to the underlying input action "Player/Attack".
             /// </summary>
             public InputAction @Attack => m_Wrapper.m_Player_Attack;
+            /// <summary>
+            /// Provides access to the underlying input action "Player/Aim".
+            /// </summary>
+            public InputAction @Aim => m_Wrapper.m_Player_Aim;
             /// <summary>
             /// Provides access to the underlying input action map instance.
             /// </summary>
@@ -547,6 +562,9 @@ namespace GenshinImpactMovementSystem
                 @Attack.started += instance.OnAttack;
                 @Attack.performed += instance.OnAttack;
                 @Attack.canceled += instance.OnAttack;
+                @Aim.started += instance.OnAim;
+                @Aim.performed += instance.OnAim;
+                @Aim.canceled += instance.OnAim;
             }
 
             /// <summary>
@@ -585,6 +603,9 @@ namespace GenshinImpactMovementSystem
                 @Attack.started -= instance.OnAttack;
                 @Attack.performed -= instance.OnAttack;
                 @Attack.canceled -= instance.OnAttack;
+                @Aim.started -= instance.OnAim;
+                @Aim.performed -= instance.OnAim;
+                @Aim.canceled -= instance.OnAim;
             }
 
             /// <summary>
@@ -688,6 +709,13 @@ namespace GenshinImpactMovementSystem
             /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
             /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
             void OnAttack(InputAction.CallbackContext context);
+            /// <summary>
+            /// Method invoked when associated input action "Aim" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
+            /// </summary>
+            /// <seealso cref="UnityEngine.InputSystem.InputAction.started" />
+            /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
+            /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
+            void OnAim(InputAction.CallbackContext context);
         }
     }
 }

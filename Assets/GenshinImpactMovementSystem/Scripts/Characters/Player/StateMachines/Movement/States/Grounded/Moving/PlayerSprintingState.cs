@@ -47,6 +47,23 @@ namespace GenshinImpactMovementSystem
         {
             base.Update();
 
+            // Если во время спринта зажали ПКМ — сразу выходим из спринта
+            if (stateMachine.Player.CombatIntentController != null &&
+                stateMachine.Player.CombatIntentController.IsAimHeld)
+            {
+                stateMachine.ReusableData.ShouldSprint = false;
+                keepSprinting = false;
+
+                if (stateMachine.ReusableData.MovementInput == Vector2.zero)
+                {
+                    stateMachine.ChangeState(stateMachine.IdlingState);
+                    return;
+                }
+
+                stateMachine.ChangeState(stateMachine.RunningState);
+                return;
+            }
+
             if (keepSprinting)
             {
                 return;
@@ -87,6 +104,15 @@ namespace GenshinImpactMovementSystem
 
         private void OnSprintPerformed(InputAction.CallbackContext context)
         {
+            // Во время зажатой ПКМ sprint запрещён
+            if (stateMachine.Player.CombatIntentController != null &&
+                stateMachine.Player.CombatIntentController.IsAimHeld)
+            {
+                keepSprinting = false;
+                stateMachine.ReusableData.ShouldSprint = false;
+                return;
+            }
+
             keepSprinting = true;
             stateMachine.ReusableData.ShouldSprint = true;
         }

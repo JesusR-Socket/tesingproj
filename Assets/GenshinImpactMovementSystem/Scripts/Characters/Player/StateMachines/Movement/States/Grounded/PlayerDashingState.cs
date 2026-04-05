@@ -6,9 +6,7 @@ namespace GenshinImpactMovementSystem
     public class PlayerDashingState : PlayerGroundedState
     {
         private float startTime;
-
         private int consecutiveDashesUsed;
-
         private bool shouldKeepRotating;
 
         public PlayerDashingState(PlayerMovementStateMachine playerMovementStateMachine) : base(playerMovementStateMachine)
@@ -18,21 +16,16 @@ namespace GenshinImpactMovementSystem
         public override void Enter()
         {
             stateMachine.ReusableData.MovementSpeedModifier = groundedData.DashData.SpeedModifier;
-
             base.Enter();
 
             StartAnimation(stateMachine.Player.AnimationData.DashParameterHash);
-
             stateMachine.ReusableData.CurrentJumpForce = airborneData.JumpData.StrongForce;
-
             stateMachine.ReusableData.RotationData = groundedData.DashData.RotationData;
 
             Dash();
 
             shouldKeepRotating = stateMachine.ReusableData.MovementInput != Vector2.zero;
-
             UpdateConsecutiveDashes();
-
             startTime = Time.time;
         }
 
@@ -41,7 +34,6 @@ namespace GenshinImpactMovementSystem
             base.Exit();
 
             StopAnimation(stateMachine.Player.AnimationData.DashParameterHash);
-
             SetBaseRotationData();
         }
 
@@ -62,39 +54,47 @@ namespace GenshinImpactMovementSystem
             if (stateMachine.ReusableData.MovementInput == Vector2.zero)
             {
                 stateMachine.ChangeState(stateMachine.HardStoppingState);
-
                 return;
             }
 
-            stateMachine.ChangeState(stateMachine.SprintingState);
+            bool isAimHeld =
+                stateMachine.Player.CombatIntentController != null &&
+                stateMachine.Player.CombatIntentController.IsAimHeld;
+
+            bool sprintHeld = stateMachine.Player.Input.PlayerActions.Sprint.IsPressed();
+
+            stateMachine.ReusableData.ShouldSprint = !isAimHeld && sprintHeld;
+
+            if (stateMachine.ReusableData.ShouldSprint)
+            {
+                stateMachine.ChangeState(stateMachine.SprintingState);
+                return;
+            }
+
+            stateMachine.ChangeState(stateMachine.RunningState);
         }
 
         protected override void AddInputActionsCallbacks()
         {
             base.AddInputActionsCallbacks();
-
             stateMachine.Player.Input.PlayerActions.Movement.performed += OnMovementPerformed;
-
         }
 
         protected override void RemoveInputActionsCallbacks()
         {
             base.RemoveInputActionsCallbacks();
-
             stateMachine.Player.Input.PlayerActions.Movement.performed -= OnMovementPerformed;
         }
 
         protected override void OnMovementPerformed(InputAction.CallbackContext context)
         {
             base.OnMovementPerformed(context);
-
             shouldKeepRotating = true;
         }
 
         private void Dash()
         {
             Vector3 dashDirection = stateMachine.Player.transform.forward;
-
             dashDirection.y = 0f;
 
             UpdateTargetRotation(dashDirection, false);
@@ -102,7 +102,6 @@ namespace GenshinImpactMovementSystem
             if (stateMachine.ReusableData.MovementInput != Vector2.zero)
             {
                 UpdateTargetRotation(GetMovementInputDirection());
-
                 dashDirection = GetTargetRotationDirection(stateMachine.ReusableData.CurrentTargetRotation.y);
             }
 
@@ -122,7 +121,10 @@ namespace GenshinImpactMovementSystem
             {
                 consecutiveDashesUsed = 0;
 
-                stateMachine.Player.Input.DisableActionFor(stateMachine.Player.Input.PlayerActions.Dash, groundedData.DashData.DashLimitReachedCooldown);
+                stateMachine.Player.Input.DisableActionFor(
+                    stateMachine.Player.Input.PlayerActions.Dash,
+                    groundedData.DashData.DashLimitReachedCooldown
+                );
             }
         }
 

@@ -119,6 +119,12 @@ namespace GenshinImpactMovementSystem
 
         protected virtual void OnDashStarted(InputAction.CallbackContext context)
         {
+            if (stateMachine.Player.CombatIntentController != null &&
+                stateMachine.Player.CombatIntentController.IsAimHeld)
+            {
+                return;
+            }
+
             stateMachine.ChangeState(stateMachine.DashingState);
         }
 

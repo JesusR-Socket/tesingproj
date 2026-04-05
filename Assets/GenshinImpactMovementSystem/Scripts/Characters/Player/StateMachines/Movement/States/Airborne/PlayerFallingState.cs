@@ -14,12 +14,16 @@ namespace GenshinImpactMovementSystem
         {
             base.Enter();
 
+            StopAnimation(stateMachine.Player.AnimationData.JumpParameterHash);
+            StopAnimation(stateMachine.Player.AnimationData.MovingJumpParameterHash);
+
             StartAnimation(stateMachine.Player.AnimationData.FallParameterHash);
+
             stateMachine.ReusableData.MovementSpeedModifier = 0f;
             playerPositionOnEnter = stateMachine.Player.transform.position;
 
-            // Убрали ResetVerticalVelocity();
-            // Он и давал маленький рывок при входе в падение.
+            // Не сбрасываем вертикальную скорость,
+            // чтобы не было лишнего рывка при входе в падение.
         }
 
         public override void Exit()
@@ -65,14 +69,7 @@ namespace GenshinImpactMovementSystem
                 return;
             }
 
-            if (stateMachine.ReusableData.ShouldWalk && !stateMachine.ReusableData.ShouldSprint ||
-                stateMachine.ReusableData.MovementInput == Vector2.zero)
-            {
-                stateMachine.ChangeState(stateMachine.HardLandingState);
-                return;
-            }
-
-            stateMachine.ChangeState(stateMachine.RollingState);
+            stateMachine.ChangeState(stateMachine.HardLandingState);
         }
     }
 }

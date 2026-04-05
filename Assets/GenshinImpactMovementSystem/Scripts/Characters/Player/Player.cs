@@ -24,6 +24,8 @@ namespace GenshinImpactMovementSystem
         public PlayerInput Input { get; private set; }
         public PlayerResizableCapsuleCollider ResizableCapsuleCollider { get; private set; }
 
+        public PlayerCombatIntentController CombatIntentController { get; private set; }
+
         public Transform MainCameraTransform { get; private set; }
 
         private PlayerMovementStateMachine movementStateMachine;
@@ -38,6 +40,8 @@ namespace GenshinImpactMovementSystem
 
             Input = GetComponent<PlayerInput>();
             ResizableCapsuleCollider = GetComponent<PlayerResizableCapsuleCollider>();
+
+            CombatIntentController = GetComponent<PlayerCombatIntentController>();
 
             MainCameraTransform = Camera.main.transform;
 

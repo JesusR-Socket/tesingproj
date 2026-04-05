@@ -5,6 +5,8 @@ namespace GenshinImpactMovementSystem
 {
     public class PlayerAttackingState : PlayerGroundedState
     {
+        private const float AttackExitNormalizedTime = 0.90f;
+
         private bool hasEnteredAttackAnimation;
         private bool hasExitedAttackState;
 
@@ -26,29 +28,18 @@ namespace GenshinImpactMovementSystem
                 stateMachine.Player.AnimationData.Attack1StateHash,
                 0.05f
             );
-
-            Debug.Log("ENTER ATTACK STATE");
         }
 
         public override void Update()
         {
             base.Update();
-
-            if (stateMachine.ReusableData.MovementInput != Vector2.zero)
-            {
-                UpdateTargetRotation(GetMovementInputDirection());
-            }
-
             TryFinishAttack();
         }
 
         public override void PhysicsUpdate()
         {
             base.PhysicsUpdate();
-            RotateTowardsTargetRotation();
         }
-
-        private const float AttackExitNormalizedTime = 0.90f;
 
         private void TryFinishAttack()
         {
@@ -79,8 +70,6 @@ namespace GenshinImpactMovementSystem
                 return;
             }
 
-            // Выходим ЧУТЬ РАНЬШЕ конца клипа, чтобы Moving/Run успели включиться
-            // до того, как Animator свалится в Grounded/Idle.
             if (currentState.normalizedTime >= AttackExitNormalizedTime)
             {
                 ExitAttack();
@@ -107,8 +96,8 @@ namespace GenshinImpactMovementSystem
 
         public override void OnAnimationTransitionEvent()
         {
-            // Для атаки выход больше не завязан на event конца.
-            // Event оставляем только для самого удара / hit window.
+            // Конец атаки не через event.
+            // Event оставляем только под hit window.
         }
 
         protected override void OnAttackStarted(InputAction.CallbackContext context)

@@ -46,7 +46,7 @@
                     "name": "Dash",
                     "type": "Button",
                     "id": "3a08fe1b-9bf9-4d09-b4c2-6df4d4fa3fff",
-                    "expectedControlType": "Button",
+                    "expectedControlType": "",
                     "processors": "",
                     "interactions": "",
                     "initialStateCheck": false
@@ -82,6 +82,15 @@
                     "name": "Attack",
                     "type": "Button",
                     "id": "32740f40-efa0-4f57-a791-a99c29200817",
+                    "expectedControlType": "",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
+                },
+                {
+                    "name": "Aim",
+                    "type": "Button",
+                    "id": "967d2740-7d79-440e-a2b8-c998be1b8147",
                     "expectedControlType": "",
                     "processors": "",
                     "interactions": "",
@@ -190,17 +199,6 @@
                 },
                 {
                     "name": "",
-                    "id": "cf8eb5b9-3f0a-4403-9480-e6090982ca30",
-                    "path": "<Mouse>/rightButton",
-                    "interactions": "",
-                    "processors": "",
-                    "groups": "",
-                    "action": "Dash",
-                    "isComposite": false,
-                    "isPartOfComposite": false
-                },
-                {
-                    "name": "",
                     "id": "9e48a1db-a15b-4594-9ec8-70f826bbc421",
                     "path": "<Keyboard>/leftShift",
                     "interactions": "",
@@ -251,6 +249,17 @@
                     "processors": "",
                     "groups": "",
                     "action": "Attack",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "1dac71c1-9d36-4731-b742-59b4e6612548",
+                    "path": "<Mouse>/rightButton",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "Aim",
                     "isComposite": false,
                     "isPartOfComposite": false
                 }

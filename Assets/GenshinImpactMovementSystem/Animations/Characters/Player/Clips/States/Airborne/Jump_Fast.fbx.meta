@@ -1,5 +1,5 @@
 fileFormatVersion: 2
-guid: 420659eff327bcd4794f99134d97636b
+guid: 5bb3fd273d0faf846854543fc6fc6b85
 ModelImporter:
   serializedVersion: 24200
   internalIDToNameTable: []
@@ -31,11 +31,11 @@ ModelImporter:
     extraUserProperties: []
     clipAnimations:
     - serializedVersion: 16
-      name: Jump
+      name: Jump_Fast
       takeName: Armature|Armature|mixamo.com|Layer0
       internalID: -4791504522942941401
-      firstFrame: 15
-      lastFrame: 57
+      firstFrame: 0
+      lastFrame: 27
       wrapMode: 0
       orientationOffsetY: 0
       level: 0
@@ -46,8 +46,8 @@ ModelImporter:
       loopBlend: 0
       loopBlendOrientation: 1
       loopBlendPositionY: 1
-      loopBlendPositionXZ: 1
-      keepOriginalOrientation: 0
+      loopBlendPositionXZ: 0
+      keepOriginalOrientation: 1
       keepOriginalPositionY: 1
       keepOriginalPositionXZ: 0
       heightFromFeet: 0
