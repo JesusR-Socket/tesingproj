@@ -10,6 +10,9 @@ namespace GenshinImpactMovementSystem
         private bool hasEnteredAttackAnimation;
         private bool hasExitedAttackState;
 
+        private int currentAttackHash;
+        private string currentAttackStateShortName;
+
         public PlayerAttackingState(PlayerMovementStateMachine playerMovementStateMachine) : base(playerMovementStateMachine)
         {
         }
@@ -17,28 +20,32 @@ namespace GenshinImpactMovementSystem
         public override void Enter()
         {
             stateMachine.ReusableData.MovementSpeedModifier = 0f;
-            base.Enter();
 
+            base.Enter();
             ResetVelocity();
 
             hasEnteredAttackAnimation = false;
             hasExitedAttackState = false;
 
-            stateMachine.Player.Animator.CrossFadeInFixedTime(
-                stateMachine.Player.AnimationData.Attack1StateHash,
-                0.05f
-            );
+            bool useAimCommitAttack =
+                stateMachine.Player.CombatIntentController != null &&
+                stateMachine.Player.CombatIntentController.ConsumeAimCommitAttack();
+
+            currentAttackHash = useAimCommitAttack
+                ? stateMachine.Player.AnimationData.Attack1StateHash
+                : stateMachine.Player.AnimationData.ShortAttackStateHash;
+
+            currentAttackStateShortName = useAimCommitAttack
+                ? "Attack1"
+                : "ShortAttack";
+
+            stateMachine.Player.Animator.CrossFadeInFixedTime(currentAttackHash, 0.05f);
         }
 
         public override void Update()
         {
             base.Update();
             TryFinishAttack();
-        }
-
-        public override void PhysicsUpdate()
-        {
-            base.PhysicsUpdate();
         }
 
         private void TryFinishAttack()
@@ -52,8 +59,8 @@ namespace GenshinImpactMovementSystem
             AnimatorStateInfo currentState = animator.GetCurrentAnimatorStateInfo(0);
 
             bool isInAttackState =
-                currentState.IsName("Attack1") ||
-                currentState.IsName("Base Layer.Attack1");
+                currentState.IsName(currentAttackStateShortName) ||
+                currentState.IsName("Base Layer." + currentAttackStateShortName);
 
             if (!hasEnteredAttackAnimation)
             {
@@ -96,13 +103,12 @@ namespace GenshinImpactMovementSystem
 
         public override void OnAnimationTransitionEvent()
         {
-            // Конец атаки не через event.
-            // Event оставляем только под hit window.
+            // hit window можно оставить через animation event
         }
 
         protected override void OnAttackStarted(InputAction.CallbackContext context)
         {
-            // Пока без комбо
+            // Блокируем спам ЛКМ во время текущей атаки
         }
 
         protected override void OnDashStarted(InputAction.CallbackContext context)

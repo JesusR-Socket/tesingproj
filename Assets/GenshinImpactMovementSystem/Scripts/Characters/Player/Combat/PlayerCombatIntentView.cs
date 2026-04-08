@@ -8,7 +8,6 @@ namespace GenshinImpactMovementSystem
         [SerializeField] private Transform intentPoint;
         [SerializeField] private LineRenderer intentLine;
         [SerializeField] private LineRenderer triangleLine;
-
         [SerializeField] private float lineHalfLength = 0.35f;
         [SerializeField] private float triangleSize = 0.2f;
         [SerializeField] private float triangleForwardOffset = 0.1f;
@@ -38,7 +37,9 @@ namespace GenshinImpactMovementSystem
             }
 
             Vector3 triangleCenter = controller.GetTrianglePosition();
-            Vector3 intentCenter = controller.IsAimHeld ? controller.GetIntentPosition() : controller.GetTrianglePosition();
+            Vector3 intentCenter = controller.IsAimHeld
+                ? controller.GetIntentPosition()
+                : controller.GetTrianglePosition();
 
             DrawTriangle(triangleCenter, controller.CharacterFacing);
             DrawIntentLine(intentCenter);
@@ -52,14 +53,14 @@ namespace GenshinImpactMovementSystem
 
         private void DrawIntentLine(Vector3 center)
         {
-            Vector3 right = mainCamera != null ? mainCamera.transform.right : Vector3.right;
-            right.y = 0f;
+            Vector3 right = Vector3.Cross(Vector3.up, controller.IntentFacing);
 
             if (right.sqrMagnitude < 0.0001f)
             {
-                right = Vector3.right;
+                right = mainCamera != null ? mainCamera.transform.right : Vector3.right;
             }
 
+            right.y = 0f;
             right.Normalize();
 
             intentLine.positionCount = 2;
@@ -77,6 +78,7 @@ namespace GenshinImpactMovementSystem
             }
 
             forward.Normalize();
+
             Vector3 right = Vector3.Cross(Vector3.up, forward).normalized;
 
             Vector3 tip = center + forward * (triangleSize + triangleForwardOffset);

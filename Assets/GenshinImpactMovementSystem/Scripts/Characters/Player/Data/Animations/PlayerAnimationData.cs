@@ -23,13 +23,17 @@ namespace GenshinImpactMovementSystem
         [SerializeField] private string hardStopParameterName = "isHardStopping";
         [SerializeField] private string rollParameterName = "isRolling";
         [SerializeField] private string hardLandParameterName = "isHardLanding";
+
         [field: SerializeField] public string UseAimLocomotionParameterName { get; private set; } = "UseAimLocomotion";
         [field: SerializeField] public string AimMoveXParameterName { get; private set; } = "AimMoveX";
         [field: SerializeField] public string AimMoveYParameterName { get; private set; } = "AimMoveY";
+
         [field: SerializeField] public string Attack1StateName { get; private set; } = "Base Layer.Attack1";
+        [field: SerializeField] public string ShortAttackStateName { get; private set; } = "Base Layer.ShortAttack";
 
         [SerializeField] private string jumpParameterName = "isJumping";
         [SerializeField] private string movingJumpParameterName = "isMovingJumping";
+
         [Header("Airborne Parameter Names")]
         [SerializeField] private string fallParameterName = "isFalling";
 
@@ -52,11 +56,13 @@ namespace GenshinImpactMovementSystem
         public int UseAimLocomotionParameterHash { get; private set; }
         public int AimMoveXParameterHash { get; private set; }
         public int AimMoveYParameterHash { get; private set; }
+
         public int JumpParameterHash { get; private set; }
         public int MovingJumpParameterHash { get; private set; }
-
         public int FallParameterHash { get; private set; }
+
         public int Attack1StateHash { get; private set; }
+        public int ShortAttackStateHash { get; private set; }
 
         public void Initialize()
         {
@@ -77,13 +83,15 @@ namespace GenshinImpactMovementSystem
             HardLandParameterHash = Animator.StringToHash(hardLandParameterName);
 
             FallParameterHash = Animator.StringToHash(fallParameterName);
-            Attack1StateHash = Animator.StringToHash(Attack1StateName);
             JumpParameterHash = Animator.StringToHash(jumpParameterName);
             MovingJumpParameterHash = Animator.StringToHash(movingJumpParameterName);
 
             UseAimLocomotionParameterHash = Animator.StringToHash(UseAimLocomotionParameterName);
             AimMoveXParameterHash = Animator.StringToHash(AimMoveXParameterName);
             AimMoveYParameterHash = Animator.StringToHash(AimMoveYParameterName);
+
+            Attack1StateHash = Animator.StringToHash(Attack1StateName);
+            ShortAttackStateHash = Animator.StringToHash(ShortAttackStateName);
         }
     }
 }

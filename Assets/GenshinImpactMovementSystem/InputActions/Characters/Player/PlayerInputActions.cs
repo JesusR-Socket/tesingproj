@@ -183,6 +183,15 @@ namespace GenshinImpactMovementSystem
                     ""processors"": """",
                     ""interactions"": """",
                     ""initialStateCheck"": false
+                },
+                {
+                    ""name"": ""CommitAttack"",
+                    ""type"": ""Button"",
+                    ""id"": ""788ec8da-c52f-4f5d-971a-91de3bbf0bf9"",
+                    ""expectedControlType"": """",
+                    ""processors"": """",
+                    ""interactions"": """",
+                    ""initialStateCheck"": false
                 }
             ],
             ""bindings"": [
@@ -350,6 +359,17 @@ namespace GenshinImpactMovementSystem
                     ""action"": ""Aim"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""4fdd6469-7e92-436e-9d16-37f281520933"",
+                    ""path"": ""<Keyboard>/q"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": """",
+                    ""action"": ""CommitAttack"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
                 }
             ]
         }
@@ -368,6 +388,7 @@ namespace GenshinImpactMovementSystem
             m_Player_CursorToggle = m_Player.FindAction("CursorToggle", throwIfNotFound: true);
             m_Player_Attack = m_Player.FindAction("Attack", throwIfNotFound: true);
             m_Player_Aim = m_Player.FindAction("Aim", throwIfNotFound: true);
+            m_Player_CommitAttack = m_Player.FindAction("CommitAttack", throwIfNotFound: true);
         }
 
         ~@PlayerInputActions()
@@ -458,6 +479,7 @@ namespace GenshinImpactMovementSystem
         private readonly InputAction m_Player_CursorToggle;
         private readonly InputAction m_Player_Attack;
         private readonly InputAction m_Player_Aim;
+        private readonly InputAction m_Player_CommitAttack;
         /// <summary>
         /// Provides access to input actions defined in input action map "Player".
         /// </summary>
@@ -509,6 +531,10 @@ namespace GenshinImpactMovementSystem
             /// Provides access to the underlying input action "Player/Aim".
             /// </summary>
             public InputAction @Aim => m_Wrapper.m_Player_Aim;
+            /// <summary>
+            /// Provides access to the underlying input action "Player/CommitAttack".
+            /// </summary>
+            public InputAction @CommitAttack => m_Wrapper.m_Player_CommitAttack;
             /// <summary>
             /// Provides access to the underlying input action map instance.
             /// </summary>
@@ -565,6 +591,9 @@ namespace GenshinImpactMovementSystem
                 @Aim.started += instance.OnAim;
                 @Aim.performed += instance.OnAim;
                 @Aim.canceled += instance.OnAim;
+                @CommitAttack.started += instance.OnCommitAttack;
+                @CommitAttack.performed += instance.OnCommitAttack;
+                @CommitAttack.canceled += instance.OnCommitAttack;
             }
 
             /// <summary>
@@ -606,6 +635,9 @@ namespace GenshinImpactMovementSystem
                 @Aim.started -= instance.OnAim;
                 @Aim.performed -= instance.OnAim;
                 @Aim.canceled -= instance.OnAim;
+                @CommitAttack.started -= instance.OnCommitAttack;
+                @CommitAttack.performed -= instance.OnCommitAttack;
+                @CommitAttack.canceled -= instance.OnCommitAttack;
             }
 
             /// <summary>
@@ -716,6 +748,13 @@ namespace GenshinImpactMovementSystem
             /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
             /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
             void OnAim(InputAction.CallbackContext context);
+            /// <summary>
+            /// Method invoked when associated input action "CommitAttack" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
+            /// </summary>
+            /// <seealso cref="UnityEngine.InputSystem.InputAction.started" />
+            /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
+            /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
+            void OnCommitAttack(InputAction.CallbackContext context);
         }
     }
 }

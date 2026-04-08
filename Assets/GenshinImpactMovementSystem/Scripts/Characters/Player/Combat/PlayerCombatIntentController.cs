@@ -8,6 +8,17 @@ namespace GenshinImpactMovementSystem
         [Header("Input")]
         [SerializeField] private InputActionReference aimActionReference;
 
+        [Header("Aim Limits")]
+        [SerializeField, Range(0f, 180f)] private float maxAimAngleFromCharacter = 75f;
+        [SerializeField] private float tapThreshold = 0.18f;
+
+        [Header("Camera Smooth")]
+        [SerializeField] private float aimClampCameraSmoothTime = 0.03f;
+        [SerializeField] private float releaseCameraReturnSmoothTime = 0.10f;
+        [SerializeField] private float commitCharacterTurnSmoothTime = 0.045f;
+        [SerializeField] private float commitCameraTurnSmoothTime = 0.05f;
+        [SerializeField] private float finishAngleThreshold = 0.5f;
+
         [Header("Intent Raycast")]
         [SerializeField] private LayerMask aimSurfaceLayers = ~0;
         [SerializeField] private float maxAimDistance = 60f;
@@ -23,10 +34,16 @@ namespace GenshinImpactMovementSystem
         public Vector3 IntentWorldPoint { get; private set; }
         public float VerticalIntentDelta { get; private set; }
 
-        public float FrozenCameraYaw { get; private set; }
-
         private Player player;
         private InputAction aimAction;
+
+        private float aimStartedTime;
+        private bool nextAttackUsesAimCommitAttack;
+
+        private bool shouldReturnCameraBehindCharacter;
+        private bool isSmoothCommitTurnActive;
+        private float smoothCommitTargetYaw;
+        private float smoothCharacterTurnVelocity;
 
         private void Awake()
         {
@@ -70,15 +87,19 @@ namespace GenshinImpactMovementSystem
 
             if (IsAimHeld)
             {
+                ClampCameraWithinAimCone();
                 UpdateIntentFromCamera();
             }
             else
             {
                 SyncIntentToCharacter();
+                UpdateReturnCameraBehindCharacter();
             }
+
+            UpdateSmoothCommitTurn();
         }
 
-        private void SyncIntentToCharacter()
+        private void CacheCharacterFacing()
         {
             Vector3 facing = player.transform.forward;
             facing.y = 0f;
@@ -89,14 +110,115 @@ namespace GenshinImpactMovementSystem
             }
 
             CharacterFacing = facing.normalized;
+        }
+
+        private float GetYawFromFacing(Vector3 facing)
+        {
+            facing.y = 0f;
+
+            if (facing.sqrMagnitude < 0.0001f)
+            {
+                facing = Vector3.forward;
+            }
+
+            return Quaternion.LookRotation(facing.normalized, Vector3.up).eulerAngles.y;
+        }
+
+        private void SyncIntentToCharacter()
+        {
+            CacheCharacterFacing();
+
             IntentFacing = CharacterFacing;
             IntentWorldPoint = player.transform.position + CharacterFacing * markerDistance;
             VerticalIntentDelta = 0f;
         }
 
+        private void ClampCameraWithinAimCone()
+        {
+            float characterYaw = GetYawFromFacing(CharacterFacing);
+            float currentCameraYaw = player.CameraRecenteringUtility.GetCurrentYaw();
+
+            float signedDelta = Mathf.DeltaAngle(characterYaw, currentCameraYaw);
+            float clampedDelta = Mathf.Clamp(signedDelta, -maxAimAngleFromCharacter, maxAimAngleFromCharacter);
+            float targetYaw = characterYaw + clampedDelta;
+
+            player.CameraRecenteringUtility.SmoothSetYaw(targetYaw, aimClampCameraSmoothTime);
+        }
+
+        private void UpdateReturnCameraBehindCharacter()
+        {
+            if (!shouldReturnCameraBehindCharacter)
+            {
+                return;
+            }
+
+            CacheCharacterFacing();
+
+            float targetYaw = GetYawFromFacing(CharacterFacing);
+            float currentYaw = player.CameraRecenteringUtility.GetCurrentYaw();
+
+            player.CameraRecenteringUtility.SmoothSetYaw(targetYaw, releaseCameraReturnSmoothTime);
+
+            if (Mathf.Abs(Mathf.DeltaAngle(currentYaw, targetYaw)) <= finishAngleThreshold)
+            {
+                player.CameraRecenteringUtility.SetYawImmediate(targetYaw);
+                shouldReturnCameraBehindCharacter = false;
+            }
+        }
+
+        private void UpdateSmoothCommitTurn()
+        {
+            if (!isSmoothCommitTurnActive)
+            {
+                return;
+            }
+
+            float currentCharacterYaw = player.transform.eulerAngles.y;
+
+            float newCharacterYaw = Mathf.SmoothDampAngle(
+                currentCharacterYaw,
+                smoothCommitTargetYaw,
+                ref smoothCharacterTurnVelocity,
+                commitCharacterTurnSmoothTime
+            );
+
+            Quaternion rotation = Quaternion.Euler(0f, newCharacterYaw, 0f);
+
+            transform.rotation = rotation;
+
+            if (player.Rigidbody != null)
+            {
+                player.Rigidbody.rotation = rotation;
+            }
+
+            player.CameraRecenteringUtility.SmoothSetYaw(smoothCommitTargetYaw, commitCameraTurnSmoothTime);
+
+            Vector3 facing = rotation * Vector3.forward;
+            facing.y = 0f;
+            facing.Normalize();
+
+            CharacterFacing = facing;
+            IntentFacing = facing;
+            IntentWorldPoint = player.transform.position + facing * markerDistance;
+            VerticalIntentDelta = 0f;
+
+            bool characterDone =
+                Mathf.Abs(Mathf.DeltaAngle(newCharacterYaw, smoothCommitTargetYaw)) <= finishAngleThreshold;
+
+            bool cameraDone =
+                Mathf.Abs(Mathf.DeltaAngle(player.CameraRecenteringUtility.GetCurrentYaw(), smoothCommitTargetYaw)) <= finishAngleThreshold;
+
+            if (characterDone && cameraDone)
+            {
+                player.CameraRecenteringUtility.SetYawImmediate(smoothCommitTargetYaw);
+                isSmoothCommitTurnActive = false;
+            }
+        }
+
         private void UpdateIntentFromCamera()
         {
             Camera cam = Camera.main;
+
             if (cam == null)
             {
                 SyncIntentToCharacter();
@@ -105,58 +227,86 @@ namespace GenshinImpactMovementSystem
 
             Ray ray = new Ray(cam.transform.position, cam.transform.forward);
 
+            Vector3 rawPoint;
+
             if (Physics.Raycast(ray, out RaycastHit hit, maxAimDistance, aimSurfaceLayers, QueryTriggerInteraction.Ignore))
             {
-                IntentWorldPoint = hit.point;
+                rawPoint = hit.point;
             }
             else
             {
-                IntentWorldPoint = cam.transform.position + cam.transform.forward * maxAimDistance;
+                rawPoint = cam.transform.position + cam.transform.forward * maxAimDistance;
             }
 
-            Vector3 direction = IntentWorldPoint - player.transform.position;
-            VerticalIntentDelta = direction.y;
-            direction.y = 0f;
+            Vector3 rawDirection = rawPoint - player.transform.position;
+            VerticalIntentDelta = rawDirection.y;
+            rawDirection.y = 0f;
 
-            if (direction.sqrMagnitude < 0.0001f)
+            if (rawDirection.sqrMagnitude < 0.0001f)
             {
-                direction = CharacterFacing;
+                rawDirection = CharacterFacing;
             }
 
-            IntentFacing = direction.normalized;
+            rawDirection.Normalize();
+
+            float signedAngle = Vector3.SignedAngle(CharacterFacing, rawDirection, Vector3.up);
+            float clampedAngle = Mathf.Clamp(signedAngle, -maxAimAngleFromCharacter, maxAimAngleFromCharacter);
+
+            Vector3 intentFacing = Quaternion.AngleAxis(clampedAngle, Vector3.up) * CharacterFacing;
+            intentFacing.y = 0f;
+            intentFacing.Normalize();
+
+            IntentFacing = intentFacing;
+            IntentWorldPoint = player.transform.position + IntentFacing * markerDistance;
         }
 
         private void OnAimStarted(InputAction.CallbackContext context)
         {
             IsAimHeld = true;
+            aimStartedTime = Time.time;
 
-            Vector3 facing = player.transform.forward;
-            facing.y = 0f;
+            shouldReturnCameraBehindCharacter = false;
 
-            if (facing.sqrMagnitude < 0.0001f)
-            {
-                facing = Vector3.forward;
-            }
+            CacheCharacterFacing();
+            player.CameraRecenteringUtility.DisableRecentering();
 
-            CharacterFacing = facing.normalized;
-
-            if (player.MainCameraTransform != null)
-            {
-                FrozenCameraYaw = player.MainCameraTransform.eulerAngles.y;
-            }
-            else
-            {
-                FrozenCameraYaw = player.transform.eulerAngles.y;
-            }
+            ClampCameraWithinAimCone();
+            UpdateIntentFromCamera();
         }
 
         private void OnAimCanceled(InputAction.CallbackContext context)
         {
+            bool wasTap = Time.time - aimStartedTime <= tapThreshold;
+
             IsAimHeld = false;
-            CommitIntentToCharacter();
+
+            // Персонажа НЕ крутим при обычном отпускании ПКМ.
+            // Возвращаем только камеру за спину.
+            shouldReturnCameraBehindCharacter = true;
+
+            // Для простого клика просто тот же возврат,
+            // но за счёт smooth time это будет быстро и не резко.
+            if (wasTap)
+            {
+                shouldReturnCameraBehindCharacter = true;
+            }
+
+            SyncIntentToCharacter();
         }
 
-        public void CommitIntentToCharacter()
+        public void PrepareAimCommitAttack()
+        {
+            nextAttackUsesAimCommitAttack = true;
+        }
+
+        public bool ConsumeAimCommitAttack()
+        {
+            bool result = nextAttackUsesAimCommitAttack;
+            nextAttackUsesAimCommitAttack = false;
+            return result;
+        }
+
+        public void BeginSmoothCommitTurn()
         {
             Vector3 facing = IntentFacing;
             facing.y = 0f;
@@ -168,19 +318,14 @@ namespace GenshinImpactMovementSystem
 
             facing.Normalize();
 
-            Quaternion rotation = Quaternion.LookRotation(facing, Vector3.up);
-
-            transform.rotation = rotation;
-
-            if (player.Rigidbody != null)
-            {
-                player.Rigidbody.rotation = rotation;
-            }
-
             CharacterFacing = facing;
             IntentFacing = facing;
             IntentWorldPoint = player.transform.position + facing * markerDistance;
             VerticalIntentDelta = 0f;
+
+            smoothCommitTargetYaw = GetYawFromFacing(facing);
+            isSmoothCommitTurnActive = true;
+            shouldReturnCameraBehindCharacter = false;
         }
 
         public Vector3 GetTrianglePosition()

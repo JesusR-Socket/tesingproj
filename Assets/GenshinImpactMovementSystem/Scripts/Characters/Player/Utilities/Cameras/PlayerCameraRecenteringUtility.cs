@@ -12,16 +12,20 @@ namespace GenshinImpactMovementSystem
         [field: SerializeField] public float DefaultHorizontalRecenteringTime { get; private set; } = 4f;
 
         private CinemachinePOV cinemachinePOV;
+        private float horizontalYawVelocity;
 
         public void Initialize()
         {
             cinemachinePOV = VirtualCamera.GetCinemachineComponent<CinemachinePOV>();
         }
 
-        public void EnableRecentering(float waitTime = -1f, float recenteringTime = -1f, float baseMovementSpeed = 1f, float movementSpeed = 1f)
+        public void EnableRecentering(
+            float waitTime = -1f,
+            float recenteringTime = -1f,
+            float baseMovementSpeed = 1f,
+            float movementSpeed = 1f)
         {
             cinemachinePOV.m_HorizontalRecentering.m_enabled = true;
-
             cinemachinePOV.m_HorizontalRecentering.CancelRecentering();
 
             if (waitTime == -1f)
@@ -43,6 +47,32 @@ namespace GenshinImpactMovementSystem
         public void DisableRecentering()
         {
             cinemachinePOV.m_HorizontalRecentering.m_enabled = false;
+        }
+
+        public float GetCurrentYaw()
+        {
+            return cinemachinePOV.m_HorizontalAxis.Value;
+        }
+
+        public void SetYawImmediate(float yaw)
+        {
+            var axis = cinemachinePOV.m_HorizontalAxis;
+            axis.Value = Mathf.Repeat(yaw, 360f);
+            cinemachinePOV.m_HorizontalAxis = axis;
+            cinemachinePOV.m_HorizontalRecentering.CancelRecentering();
+        }
+
+        public void SmoothSetYaw(float targetYaw, float smoothTime)
+        {
+            float currentYaw = GetCurrentYaw();
+            float smoothedYaw = Mathf.SmoothDampAngle(
+                currentYaw,
+                targetYaw,
+                ref horizontalYawVelocity,
+                smoothTime
+            );
+
+            SetYawImmediate(smoothedYaw);
         }
     }
 }

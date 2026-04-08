@@ -160,6 +160,13 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GenshinImpactMovementSystem.PlayerCombatIntentController
   aimActionReference: {fileID: 1116155059432819522, guid: 01d4947ae43b83e43bd641ff3cf71d8f, type: 3}
+  maxAimAngleFromCharacter: 75
+  tapThreshold: 0.18
+  aimClampCameraSmoothTime: 0.03
+  releaseCameraReturnSmoothTime: 0.1
+  commitCharacterTurnSmoothTime: 0.045
+  commitCameraTurnSmoothTime: 0.05
+  finishAngleThreshold: 0.5
   aimSurfaceLayers:
     serializedVersion: 2
     m_Bits: 12582976
@@ -1664,7 +1671,7 @@ Transform:
   m_GameObject: {fileID: 1134791614}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 2.063953, z: -5}
+  m_LocalPosition: {x: 0, y: 2.1746042, z: -3.8}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -2909,11 +2916,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 7522247111663242657, guid: 21b667a7238e0c440b6cafd867108fcb, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 2.063953
+      value: 2.1746042
       objectReference: {fileID: 0}
     - target: {fileID: 7522247111663242657, guid: 21b667a7238e0c440b6cafd867108fcb, type: 3}
       propertyPath: m_LocalPosition.z
-      value: -5
+      value: -3.8
       objectReference: {fileID: 0}
     - target: {fileID: 7522247111663242657, guid: 21b667a7238e0c440b6cafd867108fcb, type: 3}
       propertyPath: m_LocalRotation.w
@@ -2953,7 +2960,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 7522247112809039687, guid: 21b667a7238e0c440b6cafd867108fcb, type: 3}
       propertyPath: m_CameraDistance
-      value: 5
+      value: 3.8
+      objectReference: {fileID: 0}
+    - target: {fileID: 7522247112809039687, guid: 21b667a7238e0c440b6cafd867108fcb, type: 3}
+      propertyPath: m_TrackedObjectOffset.y
+      value: 0.27
+      objectReference: {fileID: 0}
+    - target: {fileID: 7522247112809039687, guid: 21b667a7238e0c440b6cafd867108fcb, type: 3}
+      propertyPath: m_TrackedObjectOffset.z
+      value: 0
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []

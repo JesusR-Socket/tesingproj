@@ -128,12 +128,12 @@ namespace GenshinImpactMovementSystem
 
         private void OnMouseMovementStarted(InputAction.CallbackContext context)
         {
-            UpdateCameraRecenteringState(stateMachine.ReusableData.MovementInput);
+
         }
 
         protected virtual void OnMovementPerformed(InputAction.CallbackContext context)
         {
-            UpdateCameraRecenteringState(context.ReadValue<Vector2>());
+
         }
 
         protected virtual void OnMovementCanceled(InputAction.CallbackContext context)
@@ -219,16 +219,15 @@ namespace GenshinImpactMovementSystem
             if (stateMachine.Player.CombatIntentController != null &&
                 stateMachine.Player.CombatIntentController.IsAimHeld)
             {
-                Vector3 intent = stateMachine.Player.CombatIntentController.IntentFacing;
+                Vector3 characterFacing = stateMachine.Player.CombatIntentController.CharacterFacing;
 
-                if (intent.sqrMagnitude < 0.0001f)
+                if (characterFacing.sqrMagnitude < 0.0001f)
                 {
-                    yaw = stateMachine.Player.transform.eulerAngles.y;
+                    characterFacing = stateMachine.Player.transform.forward;
+                    characterFacing.y = 0f;
                 }
-                else
-                {
-                    yaw = Quaternion.LookRotation(intent.normalized, Vector3.up).eulerAngles.y;
-                }
+
+                yaw = Quaternion.LookRotation(characterFacing.normalized, Vector3.up).eulerAngles.y;
             }
             else
             {
@@ -468,9 +467,9 @@ namespace GenshinImpactMovementSystem
             }
 
             Vector3 localInputDirection = GetMovementInputDirection();
-
             float worldAngle = UpdateTargetRotation(localInputDirection);
             Vector3 worldMoveDirection = GetTargetRotationDirection(worldAngle);
+
             worldMoveDirection.y = 0f;
 
             if (worldMoveDirection.sqrMagnitude < 0.0001f)
@@ -498,21 +497,34 @@ namespace GenshinImpactMovementSystem
             float aimMoveX = 0f;
             float aimMoveY = 0f;
 
-            // 4 жёстких сектора вместо плавного смешивания
-            if (signedAngle >= -45f && signedAngle <= 45f)
+            if (signedAngle >= -22.5f && signedAngle <= 22.5f)
             {
+                aimMoveX = 0f;
                 aimMoveY = 1f;      // Forward
             }
-            else if (signedAngle > 45f && signedAngle < 135f)
+            else if (signedAngle > 22.5f && signedAngle <= 67.5f)
             {
-                aimMoveX = 1f;      // Right
+                aimMoveX = 1f;
+                aimMoveY = 1f;      // ForwardRight
             }
-            else if (signedAngle < -45f && signedAngle > -135f)
+            else if (signedAngle < -22.5f && signedAngle >= -67.5f)
             {
-                aimMoveX = -1f;     // Left
+                aimMoveX = -1f;
+                aimMoveY = 1f;      // ForwardLeft
+            }
+            else if (signedAngle > 67.5f && signedAngle < 112.5f)
+            {
+                aimMoveX = 1f;
+                aimMoveY = 0f;      // Right
+            }
+            else if (signedAngle < -67.5f && signedAngle > -112.5f)
+            {
+                aimMoveX = -1f;
+                aimMoveY = 0f;      // Left
             }
             else
             {
+                aimMoveX = 0f;
                 aimMoveY = -1f;     // Back
             }
 

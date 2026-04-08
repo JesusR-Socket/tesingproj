@@ -14,10 +14,7 @@ namespace GenshinImpactMovementSystem
             base.Enter();
 
             StartAnimation(stateMachine.Player.AnimationData.GroundedParameterHash);
-
             UpdateShouldSprintState();
-
-            UpdateCameraRecenteringState(stateMachine.ReusableData.MovementInput);
         }
 
         public override void Exit()
@@ -51,14 +48,20 @@ namespace GenshinImpactMovementSystem
 
         private void Float()
         {
-            Vector3 capsuleColliderCenterInWorldSpace = stateMachine.Player.ResizableCapsuleCollider.CapsuleColliderData.Collider.bounds.center;
+            Vector3 capsuleColliderCenterInWorldSpace =
+                stateMachine.Player.ResizableCapsuleCollider.CapsuleColliderData.Collider.bounds.center;
 
-            Ray downwardsRayFromCapsuleCenter = new Ray(capsuleColliderCenterInWorldSpace, Vector3.down);
+            Ray downwardsRayFromCapsuleCenter =
+                new Ray(capsuleColliderCenterInWorldSpace, Vector3.down);
 
-            if (Physics.Raycast(downwardsRayFromCapsuleCenter, out RaycastHit hit, stateMachine.Player.ResizableCapsuleCollider.SlopeData.FloatRayDistance, stateMachine.Player.LayerData.GroundLayer, QueryTriggerInteraction.Ignore))
+            if (Physics.Raycast(
+                    downwardsRayFromCapsuleCenter,
+                    out RaycastHit hit,
+                    stateMachine.Player.ResizableCapsuleCollider.SlopeData.FloatRayDistance,
+                    stateMachine.Player.LayerData.GroundLayer,
+                    QueryTriggerInteraction.Ignore))
             {
                 float groundAngle = Vector3.Angle(hit.normal, -downwardsRayFromCapsuleCenter.direction);
-
                 float slopeSpeedModifier = SetSlopeSpeedModifierOnAngle(groundAngle);
 
                 if (slopeSpeedModifier == 0f)
@@ -66,14 +69,20 @@ namespace GenshinImpactMovementSystem
                     return;
                 }
 
-                float distanceToFloatingPoint = stateMachine.Player.ResizableCapsuleCollider.CapsuleColliderData.ColliderCenterInLocalSpace.y * stateMachine.Player.transform.localScale.y - hit.distance;
+                float distanceToFloatingPoint =
+                    stateMachine.Player.ResizableCapsuleCollider.CapsuleColliderData.ColliderCenterInLocalSpace.y *
+                    stateMachine.Player.transform.localScale.y -
+                    hit.distance;
 
                 if (distanceToFloatingPoint == 0f)
                 {
                     return;
                 }
 
-                float amountToLift = distanceToFloatingPoint * stateMachine.Player.ResizableCapsuleCollider.SlopeData.StepReachForce - GetPlayerVerticalVelocity().y;
+                float amountToLift =
+                    distanceToFloatingPoint *
+                    stateMachine.Player.ResizableCapsuleCollider.SlopeData.StepReachForce -
+                    GetPlayerVerticalVelocity().y;
 
                 Vector3 liftForce = new Vector3(0f, amountToLift, 0f);
 
@@ -88,8 +97,6 @@ namespace GenshinImpactMovementSystem
             if (stateMachine.ReusableData.MovementOnSlopesSpeedModifier != slopeSpeedModifier)
             {
                 stateMachine.ReusableData.MovementOnSlopesSpeedModifier = slopeSpeedModifier;
-
-                UpdateCameraRecenteringState(stateMachine.ReusableData.MovementInput);
             }
 
             return slopeSpeedModifier;
@@ -100,10 +107,9 @@ namespace GenshinImpactMovementSystem
             base.AddInputActionsCallbacks();
 
             stateMachine.Player.Input.PlayerActions.Dash.started += OnDashStarted;
-
             stateMachine.Player.Input.PlayerActions.Jump.started += OnJumpStarted;
-
             stateMachine.Player.Input.PlayerActions.Attack.started += OnAttackStarted;
+            stateMachine.Player.Input.PlayerActions.CommitAttack.started += OnCommitAttackStarted;
         }
 
         protected override void RemoveInputActionsCallbacks()
@@ -111,10 +117,9 @@ namespace GenshinImpactMovementSystem
             base.RemoveInputActionsCallbacks();
 
             stateMachine.Player.Input.PlayerActions.Dash.started -= OnDashStarted;
-
             stateMachine.Player.Input.PlayerActions.Jump.started -= OnJumpStarted;
-
             stateMachine.Player.Input.PlayerActions.Attack.started -= OnAttackStarted;
+            stateMachine.Player.Input.PlayerActions.CommitAttack.started -= OnCommitAttackStarted;
         }
 
         protected virtual void OnDashStarted(InputAction.CallbackContext context)
@@ -135,6 +140,22 @@ namespace GenshinImpactMovementSystem
 
         protected virtual void OnAttackStarted(InputAction.CallbackContext context)
         {
+            // ЛКМ всегда обычный short attack.
+            stateMachine.ChangeState(stateMachine.AttackingState);
+        }
+
+        protected virtual void OnCommitAttackStarted(InputAction.CallbackContext context)
+        {
+            var combat = stateMachine.Player.CombatIntentController;
+
+            if (combat == null || !combat.IsAimHeld)
+            {
+                return;
+            }
+
+            combat.PrepareAimCommitAttack();
+            combat.BeginSmoothCommitTurn();
+
             stateMachine.ChangeState(stateMachine.AttackingState);
         }
 
@@ -143,14 +164,12 @@ namespace GenshinImpactMovementSystem
             if (stateMachine.ReusableData.ShouldSprint)
             {
                 stateMachine.ChangeState(stateMachine.SprintingState);
-
                 return;
             }
 
             if (stateMachine.ReusableData.ShouldWalk)
             {
                 stateMachine.ChangeState(stateMachine.WalkingState);
-
                 return;
             }
 
@@ -164,11 +183,21 @@ namespace GenshinImpactMovementSystem
                 return;
             }
 
-            Vector3 capsuleColliderCenterInWorldSpace = stateMachine.Player.ResizableCapsuleCollider.CapsuleColliderData.Collider.bounds.center;
+            Vector3 capsuleColliderCenterInWorldSpace =
+                stateMachine.Player.ResizableCapsuleCollider.CapsuleColliderData.Collider.bounds.center;
 
-            Ray downwardsRayFromCapsuleBottom = new Ray(capsuleColliderCenterInWorldSpace - stateMachine.Player.ResizableCapsuleCollider.CapsuleColliderData.ColliderVerticalExtents, Vector3.down);
+            Ray downwardsRayFromCapsuleBottom =
+                new Ray(
+                    capsuleColliderCenterInWorldSpace -
+                    stateMachine.Player.ResizableCapsuleCollider.CapsuleColliderData.ColliderVerticalExtents,
+                    Vector3.down);
 
-            if (!Physics.Raycast(downwardsRayFromCapsuleBottom, out _, groundedData.GroundToFallRayDistance, stateMachine.Player.LayerData.GroundLayer, QueryTriggerInteraction.Ignore))
+            if (!Physics.Raycast(
+                    downwardsRayFromCapsuleBottom,
+                    out _,
+                    groundedData.GroundToFallRayDistance,
+                    stateMachine.Player.LayerData.GroundLayer,
+                    QueryTriggerInteraction.Ignore))
             {
                 OnFall();
             }
@@ -176,11 +205,18 @@ namespace GenshinImpactMovementSystem
 
         private bool IsThereGroundUnderneath()
         {
-            PlayerTriggerColliderData triggerColliderData = stateMachine.Player.ResizableCapsuleCollider.TriggerColliderData;
+            PlayerTriggerColliderData triggerColliderData =
+                stateMachine.Player.ResizableCapsuleCollider.TriggerColliderData;
 
-            Vector3 groundColliderCenterInWorldSpace = triggerColliderData.GroundCheckCollider.bounds.center;
+            Vector3 groundColliderCenterInWorldSpace =
+                triggerColliderData.GroundCheckCollider.bounds.center;
 
-            Collider[] overlappedGroundColliders = Physics.OverlapBox(groundColliderCenterInWorldSpace, triggerColliderData.GroundCheckColliderVerticalExtents, triggerColliderData.GroundCheckCollider.transform.rotation, stateMachine.Player.LayerData.GroundLayer, QueryTriggerInteraction.Ignore);
+            Collider[] overlappedGroundColliders = Physics.OverlapBox(
+                groundColliderCenterInWorldSpace,
+                triggerColliderData.GroundCheckColliderVerticalExtents,
+                triggerColliderData.GroundCheckCollider.transform.rotation,
+                stateMachine.Player.LayerData.GroundLayer,
+                QueryTriggerInteraction.Ignore);
 
             return overlappedGroundColliders.Length > 0;
         }
@@ -193,6 +229,12 @@ namespace GenshinImpactMovementSystem
         protected override void OnMovementPerformed(InputAction.CallbackContext context)
         {
             base.OnMovementPerformed(context);
+
+            if (stateMachine.Player.CombatIntentController != null &&
+                stateMachine.Player.CombatIntentController.IsAimHeld)
+            {
+                return;
+            }
 
             UpdateTargetRotation(GetMovementInputDirection());
         }
