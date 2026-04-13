@@ -29,14 +29,10 @@ namespace GenshinImpactMovementSystem
             cinemachinePOV.m_HorizontalRecentering.CancelRecentering();
 
             if (waitTime == -1f)
-            {
                 waitTime = DefaultHorizontalWaitTime;
-            }
 
             if (recenteringTime == -1f)
-            {
                 recenteringTime = DefaultHorizontalRecenteringTime;
-            }
 
             recenteringTime = recenteringTime * baseMovementSpeed / movementSpeed;
 
@@ -65,6 +61,7 @@ namespace GenshinImpactMovementSystem
         public void SmoothSetYaw(float targetYaw, float smoothTime)
         {
             float currentYaw = GetCurrentYaw();
+
             float smoothedYaw = Mathf.SmoothDampAngle(
                 currentYaw,
                 targetYaw,
@@ -73,6 +70,17 @@ namespace GenshinImpactMovementSystem
             );
 
             SetYawImmediate(smoothedYaw);
+        }
+
+        public void SnapBehindDirection(Vector3 forward)
+        {
+            forward.y = 0f;
+
+            if (forward.sqrMagnitude < 0.0001f)
+                return;
+
+            forward.Normalize();
+            SetYawImmediate(Quaternion.LookRotation(forward, Vector3.up).eulerAngles.y);
         }
     }
 }

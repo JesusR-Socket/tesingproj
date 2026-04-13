@@ -20,7 +20,6 @@ namespace GenshinImpactMovementSystem
         public override void Exit()
         {
             base.Exit();
-
             StopAnimation(stateMachine.Player.AnimationData.AirborneParameterHash);
         }
 
@@ -33,31 +32,48 @@ namespace GenshinImpactMovementSystem
         protected virtual void RotateInAir()
         {
             if (stateMachine.ReusableData.MovementInput == Vector2.zero)
+                return;
+
+            // С Shift в воздухе оставляем steering через камеру.
+            bool useShiftAirSteering =
+                stateMachine.Player.CombatIntentController != null &&
+                stateMachine.Player.CombatIntentController.IsBackCameraHeld;
+
+            if (useShiftAirSteering)
             {
+                UpdateTargetRotation(GetMovementInputDirection());
+                RotateTowardsTargetRotation();
                 return;
             }
 
-            // Если позже дашь air movement speed > 0,
-            // базовый Move() уже сам вызовет rotation.
-            if (stateMachine.ReusableData.MovementSpeedModifier > 0f)
-            {
-                return;
-            }
+            // Без Shift:
+            // не крутимся за камерой, а только смотрим по реальному горизонтальному вектору.
+            Vector3 horizontalVelocity = stateMachine.Player.Rigidbody.linearVelocity;
+            horizontalVelocity.y = 0f;
 
-            UpdateTargetRotation(GetMovementInputDirection());
-            RotateTowardsTargetRotation();
+            if (horizontalVelocity.sqrMagnitude <= 0.01f)
+                return;
+
+            float velocityAngle = Quaternion.LookRotation(horizontalVelocity.normalized, Vector3.up).eulerAngles.y;
+            stateMachine.ReusableData.CurrentTargetRotation.y = velocityAngle;
+            stateMachine.Player.Rigidbody.MoveRotation(Quaternion.Euler(0f, velocityAngle, 0f));
         }
 
         protected override void OnMovementPerformed(InputAction.CallbackContext context)
         {
             base.OnMovementPerformed(context);
 
+            bool useShiftAirSteering =
+                stateMachine.Player.CombatIntentController != null &&
+                stateMachine.Player.CombatIntentController.IsBackCameraHeld;
+
+            if (!useShiftAirSteering)
+                return;
+
             Vector2 movementInput = context.ReadValue<Vector2>();
 
             if (movementInput == Vector2.zero)
-            {
                 return;
-            }
 
             UpdateTargetRotation(new Vector3(movementInput.x, 0f, movementInput.y));
         }

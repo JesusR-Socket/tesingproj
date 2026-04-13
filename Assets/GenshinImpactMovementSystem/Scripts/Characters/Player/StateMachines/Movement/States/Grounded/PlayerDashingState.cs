@@ -16,15 +16,15 @@ namespace GenshinImpactMovementSystem
         public override void Enter()
         {
             stateMachine.ReusableData.MovementSpeedModifier = groundedData.DashData.SpeedModifier;
+
             base.Enter();
 
             StartAnimation(stateMachine.Player.AnimationData.DashParameterHash);
             stateMachine.ReusableData.CurrentJumpForce = airborneData.JumpData.StrongForce;
-            stateMachine.ReusableData.RotationData = groundedData.DashData.RotationData;
 
             Dash();
-
             shouldKeepRotating = stateMachine.ReusableData.MovementInput != Vector2.zero;
+
             UpdateConsecutiveDashes();
             startTime = Time.time;
         }
@@ -42,9 +42,7 @@ namespace GenshinImpactMovementSystem
             base.PhysicsUpdate();
 
             if (!shouldKeepRotating)
-            {
                 return;
-            }
 
             RotateTowardsTargetRotation();
         }
@@ -57,14 +55,8 @@ namespace GenshinImpactMovementSystem
                 return;
             }
 
-            bool isAimHeld =
-                stateMachine.Player.CombatIntentController != null &&
-                stateMachine.Player.CombatIntentController.IsAimHeld;
-
-            bool sprintHeld = stateMachine.Player.Input.PlayerActions.Sprint.IsPressed();
-
-            stateMachine.ReusableData.ShouldSprint = !isAimHeld && sprintHeld;
-
+            // Sprint теперь определяется только тем,
+            // что выставил double-tap/hold, а не Shift.
             if (stateMachine.ReusableData.ShouldSprint)
             {
                 stateMachine.ChangeState(stateMachine.SprintingState);
@@ -111,9 +103,7 @@ namespace GenshinImpactMovementSystem
         private void UpdateConsecutiveDashes()
         {
             if (!IsConsecutive())
-            {
                 consecutiveDashesUsed = 0;
-            }
 
             ++consecutiveDashesUsed;
 
@@ -133,8 +123,8 @@ namespace GenshinImpactMovementSystem
             return Time.time < startTime + groundedData.DashData.TimeToBeConsideredConsecutive;
         }
 
-        protected override void OnDashStarted(InputAction.CallbackContext context)
-        {
-        }
+        protected override void OnDashStarted(InputAction.CallbackContext context) { }
+        protected override void OnAttackStarted(InputAction.CallbackContext context) { }
+        protected override void OnCommitAttackStarted(InputAction.CallbackContext context) { }
     }
 }

@@ -16,6 +16,7 @@ namespace GenshinImpactMovementSystem
         public override void Enter()
         {
             stateMachine.ReusableData.MovementSpeedModifier = groundedData.SprintData.SpeedModifier;
+
             base.Enter();
 
             StartAnimation(stateMachine.Player.AnimationData.SprintParameterHash);
@@ -23,11 +24,7 @@ namespace GenshinImpactMovementSystem
 
             startTime = Time.time;
             shouldResetSprintState = true;
-
-            if (!stateMachine.ReusableData.ShouldSprint)
-            {
-                keepSprinting = false;
-            }
+            keepSprinting = stateMachine.ReusableData.ShouldSprint;
         }
 
         public override void Exit()
@@ -47,7 +44,6 @@ namespace GenshinImpactMovementSystem
         {
             base.Update();
 
-            // Если во время спринта зажали ПКМ — сразу выходим из спринта
             if (stateMachine.Player.CombatIntentController != null &&
                 stateMachine.Player.CombatIntentController.IsAimHeld)
             {
@@ -65,14 +61,10 @@ namespace GenshinImpactMovementSystem
             }
 
             if (keepSprinting)
-            {
                 return;
-            }
 
             if (Time.time < startTime + groundedData.SprintData.SprintToRunTime)
-            {
                 return;
-            }
 
             StopSprinting();
         }
@@ -91,50 +83,28 @@ namespace GenshinImpactMovementSystem
         protected override void AddInputActionsCallbacks()
         {
             base.AddInputActionsCallbacks();
-
-            stateMachine.Player.Input.PlayerActions.Sprint.performed += OnSprintPerformed;
         }
 
         protected override void RemoveInputActionsCallbacks()
         {
             base.RemoveInputActionsCallbacks();
-
-            stateMachine.Player.Input.PlayerActions.Sprint.performed -= OnSprintPerformed;
-        }
-
-        private void OnSprintPerformed(InputAction.CallbackContext context)
-        {
-            // Во время зажатой ПКМ sprint запрещён
-            if (stateMachine.Player.CombatIntentController != null &&
-                stateMachine.Player.CombatIntentController.IsAimHeld)
-            {
-                keepSprinting = false;
-                stateMachine.ReusableData.ShouldSprint = false;
-                return;
-            }
-
-            keepSprinting = true;
-            stateMachine.ReusableData.ShouldSprint = true;
         }
 
         protected override void OnMovementCanceled(InputAction.CallbackContext context)
         {
             stateMachine.ChangeState(stateMachine.HardStoppingState);
-
             base.OnMovementCanceled(context);
         }
 
         protected override void OnJumpStarted(InputAction.CallbackContext context)
         {
             shouldResetSprintState = false;
-
             base.OnJumpStarted(context);
         }
 
         protected override void OnFall()
         {
             shouldResetSprintState = false;
-
             base.OnFall();
         }
     }

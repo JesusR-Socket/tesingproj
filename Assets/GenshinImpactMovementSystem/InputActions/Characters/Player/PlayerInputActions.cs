@@ -152,7 +152,7 @@ namespace GenshinImpactMovementSystem
                     ""name"": ""Jump"",
                     ""type"": ""Button"",
                     ""id"": ""42d840d2-9d21-44e7-992a-8d5a10e30132"",
-                    ""expectedControlType"": ""Button"",
+                    ""expectedControlType"": """",
                     ""processors"": """",
                     ""interactions"": """",
                     ""initialStateCheck"": false
@@ -285,30 +285,8 @@ namespace GenshinImpactMovementSystem
                 },
                 {
                     ""name"": """",
-                    ""id"": ""71c1f680-d733-447c-b2ee-a095148f37b8"",
-                    ""path"": ""<Keyboard>/leftShift"",
-                    ""interactions"": """",
-                    ""processors"": """",
-                    ""groups"": """",
-                    ""action"": ""Dash"",
-                    ""isComposite"": false,
-                    ""isPartOfComposite"": false
-                },
-                {
-                    ""name"": """",
                     ""id"": ""9e48a1db-a15b-4594-9ec8-70f826bbc421"",
                     ""path"": ""<Keyboard>/leftShift"",
-                    ""interactions"": """",
-                    ""processors"": """",
-                    ""groups"": """",
-                    ""action"": ""Sprint"",
-                    ""isComposite"": false,
-                    ""isPartOfComposite"": false
-                },
-                {
-                    ""name"": """",
-                    ""id"": ""e0de007e-23c3-4d2f-b333-24d953a5ecf3"",
-                    ""path"": ""<Mouse>/rightButton"",
                     ""interactions"": """",
                     ""processors"": """",
                     ""groups"": """",

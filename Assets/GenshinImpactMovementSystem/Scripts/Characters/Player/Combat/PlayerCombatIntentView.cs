@@ -17,9 +17,7 @@ namespace GenshinImpactMovementSystem
         private void Awake()
         {
             if (controller == null)
-            {
                 controller = GetComponent<PlayerCombatIntentController>();
-            }
 
             mainCamera = Camera.main;
         }
@@ -27,28 +25,24 @@ namespace GenshinImpactMovementSystem
         private void LateUpdate()
         {
             if (controller == null || intentPoint == null || intentLine == null || triangleLine == null)
-            {
                 return;
-            }
 
             if (mainCamera == null)
-            {
                 mainCamera = Camera.main;
-            }
 
-            Vector3 triangleCenter = controller.GetTrianglePosition();
-            Vector3 intentCenter = controller.IsAimHeld
-                ? controller.GetIntentPosition()
-                : controller.GetTrianglePosition();
+            Vector3 lineCenter = controller.GetIntentPosition();
+            intentPoint.position = lineCenter;
 
-            DrawTriangle(triangleCenter, controller.CharacterFacing);
-            DrawIntentLine(intentCenter);
+            DrawIntentLine(lineCenter);
 
-            intentPoint.position = intentCenter;
+            intentPoint.gameObject.SetActive(true);
+            intentLine.gameObject.SetActive(true);
 
-            bool showIntent = controller.IsAimHeld;
-            intentPoint.gameObject.SetActive(showIntent);
-            intentLine.gameObject.SetActive(showIntent);
+            bool showTriangle = controller.IsAimHeld;
+            triangleLine.gameObject.SetActive(showTriangle);
+
+            if (showTriangle)
+                DrawTriangle(controller.GetTrianglePosition(), controller.CharacterFacing);
         }
 
         private void DrawIntentLine(Vector3 center)
@@ -56,9 +50,7 @@ namespace GenshinImpactMovementSystem
             Vector3 right = Vector3.Cross(Vector3.up, controller.IntentFacing);
 
             if (right.sqrMagnitude < 0.0001f)
-            {
                 right = mainCamera != null ? mainCamera.transform.right : Vector3.right;
-            }
 
             right.y = 0f;
             right.Normalize();
@@ -73,9 +65,7 @@ namespace GenshinImpactMovementSystem
             forward.y = 0f;
 
             if (forward.sqrMagnitude < 0.0001f)
-            {
                 forward = Vector3.forward;
-            }
 
             forward.Normalize();
 

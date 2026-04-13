@@ -5,6 +5,11 @@ namespace GenshinImpactMovementSystem
 {
     public class PlayerGroundedState : PlayerMovementState
     {
+        private const float DoubleTapDashWindow = 0.22f;
+
+        private Vector2 lastDashTapDirection = Vector2.zero;
+        private float lastDashTapTime = -10f;
+
         public PlayerGroundedState(PlayerMovementStateMachine playerMovementStateMachine) : base(playerMovementStateMachine)
         {
         }
@@ -27,21 +32,16 @@ namespace GenshinImpactMovementSystem
         public override void PhysicsUpdate()
         {
             base.PhysicsUpdate();
-
             Float();
         }
 
         private void UpdateShouldSprintState()
         {
             if (!stateMachine.ReusableData.ShouldSprint)
-            {
                 return;
-            }
 
             if (stateMachine.ReusableData.MovementInput != Vector2.zero)
-            {
                 return;
-            }
 
             stateMachine.ReusableData.ShouldSprint = false;
         }
@@ -65,9 +65,7 @@ namespace GenshinImpactMovementSystem
                 float slopeSpeedModifier = SetSlopeSpeedModifierOnAngle(groundAngle);
 
                 if (slopeSpeedModifier == 0f)
-                {
                     return;
-                }
 
                 float distanceToFloatingPoint =
                     stateMachine.Player.ResizableCapsuleCollider.CapsuleColliderData.ColliderCenterInLocalSpace.y *
@@ -75,9 +73,7 @@ namespace GenshinImpactMovementSystem
                     hit.distance;
 
                 if (distanceToFloatingPoint == 0f)
-                {
                     return;
-                }
 
                 float amountToLift =
                     distanceToFloatingPoint *
@@ -95,9 +91,7 @@ namespace GenshinImpactMovementSystem
             float slopeSpeedModifier = groundedData.SlopeSpeedAngles.Evaluate(angle);
 
             if (stateMachine.ReusableData.MovementOnSlopesSpeedModifier != slopeSpeedModifier)
-            {
                 stateMachine.ReusableData.MovementOnSlopesSpeedModifier = slopeSpeedModifier;
-            }
 
             return slopeSpeedModifier;
         }
@@ -124,13 +118,7 @@ namespace GenshinImpactMovementSystem
 
         protected virtual void OnDashStarted(InputAction.CallbackContext context)
         {
-            if (stateMachine.Player.CombatIntentController != null &&
-                stateMachine.Player.CombatIntentController.IsAimHeld)
-            {
-                return;
-            }
-
-            stateMachine.ChangeState(stateMachine.DashingState);
+            // Shift больше не делает dash.
         }
 
         protected virtual void OnJumpStarted(InputAction.CallbackContext context)
@@ -140,7 +128,13 @@ namespace GenshinImpactMovementSystem
 
         protected virtual void OnAttackStarted(InputAction.CallbackContext context)
         {
-            // ЛКМ всегда обычный short attack.
+            var combat = stateMachine.Player.CombatIntentController;
+
+            // Без ПКМ — бьём только вперёд по персонажу.
+            // С ПКМ — поворачиваемся к полоске.
+            if (combat != null && combat.IsAimHeld)
+                combat.CommitIntentToCharacter();
+
             stateMachine.ChangeState(stateMachine.AttackingState);
         }
 
@@ -148,13 +142,13 @@ namespace GenshinImpactMovementSystem
         {
             var combat = stateMachine.Player.CombatIntentController;
 
-            if (combat == null || !combat.IsAimHeld)
-            {
-                return;
-            }
+            // Без ПКМ — Attack1 тоже только вперёд.
+            // С ПКМ — Attack1 по полоске.
+            if (combat != null && combat.IsAimHeld)
+                combat.CommitIntentToCharacter();
 
-            combat.PrepareAimCommitAttack();
-            combat.BeginSmoothCommitTurn();
+            if (combat != null)
+                combat.PrepareAimCommitAttack();
 
             stateMachine.ChangeState(stateMachine.AttackingState);
         }
@@ -179,9 +173,7 @@ namespace GenshinImpactMovementSystem
         protected override void OnContactWithGroundExited(Collider collider)
         {
             if (IsThereGroundUnderneath())
-            {
                 return;
-            }
 
             Vector3 capsuleColliderCenterInWorldSpace =
                 stateMachine.Player.ResizableCapsuleCollider.CapsuleColliderData.Collider.bounds.center;
@@ -228,6 +220,11 @@ namespace GenshinImpactMovementSystem
 
         protected override void OnMovementPerformed(InputAction.CallbackContext context)
         {
+            Vector2 rawInput = context.ReadValue<Vector2>();
+
+            if (TryDoubleTapDash(rawInput))
+                return;
+
             base.OnMovementPerformed(context);
 
             if (stateMachine.Player.CombatIntentController != null &&
@@ -237,6 +234,68 @@ namespace GenshinImpactMovementSystem
             }
 
             UpdateTargetRotation(GetMovementInputDirection());
+        }
+
+        private Vector2 GetSingleKeyTapDirection(Vector2 input)
+        {
+            bool xPressed = Mathf.Abs(input.x) > 0.5f;
+            bool yPressed = Mathf.Abs(input.y) > 0.5f;
+
+            if (xPressed && yPressed)
+                return Vector2.zero;
+
+            if (xPressed)
+                return new Vector2(Mathf.Sign(input.x), 0f);
+
+            if (yPressed)
+                return new Vector2(0f, Mathf.Sign(input.y));
+
+            return Vector2.zero;
+        }
+
+        private bool IsDirectionStillHeld(Vector2 direction)
+        {
+            if (Keyboard.current == null)
+                return false;
+
+            if (direction == Vector2.up) return Keyboard.current.wKey.isPressed;
+            if (direction == Vector2.down) return Keyboard.current.sKey.isPressed;
+            if (direction == Vector2.left) return Keyboard.current.aKey.isPressed;
+            if (direction == Vector2.right) return Keyboard.current.dKey.isPressed;
+
+            return false;
+        }
+
+        private bool TryDoubleTapDash(Vector2 rawInput)
+        {
+            if (stateMachine.Player.CombatIntentController != null &&
+                stateMachine.Player.CombatIntentController.IsAimHeld)
+            {
+                return false;
+            }
+
+            Vector2 tapDirection = GetSingleKeyTapDirection(rawInput);
+
+            if (tapDirection == Vector2.zero)
+                return false;
+
+            if (tapDirection == lastDashTapDirection &&
+                Time.time - lastDashTapTime <= DoubleTapDashWindow)
+            {
+                stateMachine.ReusableData.MovementInput = tapDirection;
+                stateMachine.ReusableData.ShouldSprint = IsDirectionStillHeld(tapDirection);
+
+                UpdateTargetRotation(GetMovementInputDirection());
+                stateMachine.ChangeState(stateMachine.DashingState);
+
+                lastDashTapDirection = Vector2.zero;
+                lastDashTapTime = -10f;
+                return true;
+            }
+
+            lastDashTapDirection = tapDirection;
+            lastDashTapTime = Time.time;
+            return false;
         }
     }
 }
