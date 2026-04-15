@@ -36,7 +36,7 @@ namespace GenshinImpactMovementSystem
 
         public virtual void Update()
         {
-            UpdateAimLocomotionBlendTree();
+            UpdateTargetModeLocomotionBlendTree();
         }
 
         public virtual void PhysicsUpdate()
@@ -47,19 +47,13 @@ namespace GenshinImpactMovementSystem
         public virtual void OnTriggerEnter(Collider collider)
         {
             if (stateMachine.Player.LayerData.IsGroundLayer(collider.gameObject.layer))
-            {
                 OnContactWithGround(collider);
-                return;
-            }
         }
 
         public virtual void OnTriggerExit(Collider collider)
         {
             if (stateMachine.Player.LayerData.IsGroundLayer(collider.gameObject.layer))
-            {
                 OnContactWithGroundExited(collider);
-                return;
-            }
         }
 
         public virtual void OnAnimationEnterEvent() { }
@@ -150,22 +144,6 @@ namespace GenshinImpactMovementSystem
         protected Vector3 GetMovementInputDirection()
         {
             Vector2 input = stateMachine.ReusableData.MovementInput;
-            var combat = stateMachine.Player.CombatIntentController;
-
-            // ПКМ + без Shift:
-            // когда полоска уходит дальше 90°, зеркалим управление.
-            if (combat != null && combat.IsAimHeld && !combat.IsBackCameraHeld)
-            {
-                float signedAngle = Vector3.SignedAngle(
-                    combat.CharacterFacing,
-                    combat.IntentFacing,
-                    Vector3.up
-                );
-
-                if (Mathf.Abs(signedAngle) > 90f)
-                    input *= -1f;
-            }
-
             return new Vector3(input.x, 0f, input.y);
         }
 
@@ -173,19 +151,19 @@ namespace GenshinImpactMovementSystem
         {
             float directionAngle = UpdateTargetRotation(direction);
             RotateTowardsTargetRotation();
-
             return directionAngle;
         }
 
         protected virtual bool ShouldUseCameraRelativeMovement()
         {
-            if (this is PlayerAirborneState)
-            {
-                return stateMachine.Player.CombatIntentController != null &&
-                       stateMachine.Player.CombatIntentController.IsBackCameraHeld;
-            }
+            var combat = stateMachine.Player.CombatIntentController;
 
-            return true;
+            if (combat == null)
+                return true;
+
+            // Base mode = original repo movement относительно камеры.
+            // Shift mode = target movement относительно facing персонажа.
+            return !combat.IsTargetModeHeld;
         }
 
         protected float UpdateTargetRotation(Vector3 direction, bool shouldConsiderCameraRotation = true)
@@ -196,9 +174,12 @@ namespace GenshinImpactMovementSystem
             {
                 directionAngle = AddCameraRotationToAngle(directionAngle);
             }
-            else if (!ShouldUseCameraRelativeMovement())
+            else
             {
-                directionAngle += stateMachine.Player.transform.eulerAngles.y;
+                Vector3 movementReference = GetMovementReferenceFacing();
+                float referenceYaw = Quaternion.LookRotation(movementReference, Vector3.up).eulerAngles.y;
+
+                directionAngle += referenceYaw;
 
                 if (directionAngle > 360f)
                     directionAngle -= 360f;
@@ -208,6 +189,24 @@ namespace GenshinImpactMovementSystem
                 UpdateTargetRotationData(directionAngle);
 
             return directionAngle;
+        }
+
+        protected Vector3 GetMovementReferenceFacing()
+        {
+            var combat = stateMachine.Player.CombatIntentController;
+
+            if (combat != null)
+            {
+                Vector3 facing = combat.GetMovementReferenceFacing();
+                facing.y = 0f;
+
+                if (facing.sqrMagnitude > 0.0001f)
+                    return facing.normalized;
+            }
+
+            Vector3 forward = stateMachine.Player.transform.forward;
+            forward.y = 0f;
+            return forward.sqrMagnitude > 0.0001f ? forward.normalized : Vector3.forward;
         }
 
         private float GetDirectionAngle(Vector3 direction)
@@ -222,27 +221,7 @@ namespace GenshinImpactMovementSystem
 
         private float AddCameraRotationToAngle(float angle)
         {
-            float yaw;
-
-            if (stateMachine.Player.CombatIntentController != null &&
-                stateMachine.Player.CombatIntentController.IsAimHeld)
-            {
-                Vector3 characterFacing = stateMachine.Player.CombatIntentController.CharacterFacing;
-
-                if (characterFacing.sqrMagnitude < 0.0001f)
-                {
-                    characterFacing = stateMachine.Player.transform.forward;
-                    characterFacing.y = 0f;
-                }
-
-                yaw = Quaternion.LookRotation(characterFacing.normalized, Vector3.up).eulerAngles.y;
-            }
-            else
-            {
-                yaw = stateMachine.Player.MainCameraTransform.eulerAngles.y;
-            }
-
-            angle += yaw;
+            angle += stateMachine.Player.MainCameraTransform.eulerAngles.y;
 
             if (angle > 360f)
                 angle -= 360f;
@@ -258,11 +237,11 @@ namespace GenshinImpactMovementSystem
 
         protected void RotateTowardsTargetRotation()
         {
-            if (stateMachine.Player.CombatIntentController != null &&
-                stateMachine.Player.CombatIntentController.IsAimHeld)
-            {
+            var combat = stateMachine.Player.CombatIntentController;
+
+            // Shift mode сам поворачивает персонажа в controller.
+            if (combat != null && combat.IsTargetModeHeld)
                 return;
-            }
 
             float currentYAngle = stateMachine.Player.Rigidbody.rotation.eulerAngles.y;
 
@@ -430,23 +409,20 @@ namespace GenshinImpactMovementSystem
             return GetPlayerVerticalVelocity().y < -minimumVelocity;
         }
 
-        protected void UpdateAimLocomotionBlendTree()
+        protected void UpdateTargetModeLocomotionBlendTree()
         {
-            bool isAimHeld =
-                stateMachine.Player.CombatIntentController != null &&
-                stateMachine.Player.CombatIntentController.IsAimHeld;
-
+            var combat = stateMachine.Player.CombatIntentController;
+            bool useTargetModeMovement = combat != null && combat.IsTargetModeHeld;
             bool hasMovementInput = stateMachine.ReusableData.MovementInput != Vector2.zero;
-            bool useAimLocomotion = isAimHeld && hasMovementInput;
 
             Animator animator = stateMachine.Player.Animator;
 
             animator.SetBool(
                 stateMachine.Player.AnimationData.UseAimLocomotionParameterHash,
-                useAimLocomotion
+                useTargetModeMovement && hasMovementInput
             );
 
-            if (!useAimLocomotion)
+            if (!(useTargetModeMovement && hasMovementInput))
             {
                 animator.SetFloat(stateMachine.Player.AnimationData.AimMoveXParameterHash, 0f);
                 animator.SetFloat(stateMachine.Player.AnimationData.AimMoveYParameterHash, 0f);
@@ -468,18 +444,15 @@ namespace GenshinImpactMovementSystem
 
             worldMoveDirection.Normalize();
 
-            Vector3 triangleForward = stateMachine.Player.CombatIntentController.CharacterFacing;
-            triangleForward.y = 0f;
+            Vector3 forward = GetMovementReferenceFacing();
+            forward.y = 0f;
 
-            if (triangleForward.sqrMagnitude < 0.0001f)
-            {
-                triangleForward = stateMachine.Player.transform.forward;
-                triangleForward.y = 0f;
-            }
+            if (forward.sqrMagnitude < 0.0001f)
+                forward = stateMachine.Player.transform.forward;
 
-            triangleForward.Normalize();
+            forward.Normalize();
 
-            float signedAngle = Vector3.SignedAngle(triangleForward, worldMoveDirection, Vector3.up);
+            float signedAngle = Vector3.SignedAngle(forward, worldMoveDirection, Vector3.up);
 
             float aimMoveX = 0f;
             float aimMoveY = 0f;

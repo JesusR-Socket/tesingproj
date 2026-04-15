@@ -21,6 +21,7 @@ namespace GenshinImpactMovementSystem
 
             StartAnimation(stateMachine.Player.AnimationData.DashParameterHash);
             stateMachine.ReusableData.CurrentJumpForce = airborneData.JumpData.StrongForce;
+            stateMachine.ReusableData.RotationData = groundedData.DashData.RotationData;
 
             Dash();
             shouldKeepRotating = stateMachine.ReusableData.MovementInput != Vector2.zero;
@@ -55,8 +56,6 @@ namespace GenshinImpactMovementSystem
                 return;
             }
 
-            // Sprint теперь определяется только тем,
-            // что выставил double-tap/hold, а не Shift.
             if (stateMachine.ReusableData.ShouldSprint)
             {
                 stateMachine.ChangeState(stateMachine.SprintingState);

@@ -31,23 +31,22 @@ namespace GenshinImpactMovementSystem
 
         protected virtual void RotateInAir()
         {
-            if (stateMachine.ReusableData.MovementInput == Vector2.zero)
-                return;
+            var combat = stateMachine.Player.CombatIntentController;
 
-            // С Shift в воздухе оставляем steering через камеру.
-            bool useShiftAirSteering =
-                stateMachine.Player.CombatIntentController != null &&
-                stateMachine.Player.CombatIntentController.IsBackCameraHeld;
+            // В target mode (Shift) оставляем steering через target-style movement.
+            bool useTargetModeAirSteering =
+                combat != null &&
+                combat.IsTargetModeHeld;
 
-            if (useShiftAirSteering)
+            if (useTargetModeAirSteering && stateMachine.ReusableData.MovementInput != Vector2.zero)
             {
                 UpdateTargetRotation(GetMovementInputDirection());
                 RotateTowardsTargetRotation();
                 return;
             }
 
-            // Без Shift:
-            // не крутимся за камерой, а только смотрим по реальному горизонтальному вектору.
+            // Без Shift не крутимся за камерой,
+            // а просто ориентируемся по реальному горизонтальному движению.
             Vector3 horizontalVelocity = stateMachine.Player.Rigidbody.linearVelocity;
             horizontalVelocity.y = 0f;
 
@@ -63,11 +62,13 @@ namespace GenshinImpactMovementSystem
         {
             base.OnMovementPerformed(context);
 
-            bool useShiftAirSteering =
-                stateMachine.Player.CombatIntentController != null &&
-                stateMachine.Player.CombatIntentController.IsBackCameraHeld;
+            var combat = stateMachine.Player.CombatIntentController;
 
-            if (!useShiftAirSteering)
+            bool useTargetModeAirSteering =
+                combat != null &&
+                combat.IsTargetModeHeld;
+
+            if (!useTargetModeAirSteering)
                 return;
 
             Vector2 movementInput = context.ReadValue<Vector2>();

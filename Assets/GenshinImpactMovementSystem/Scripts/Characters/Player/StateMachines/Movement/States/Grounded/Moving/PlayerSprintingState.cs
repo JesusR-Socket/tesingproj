@@ -44,8 +44,10 @@ namespace GenshinImpactMovementSystem
         {
             base.Update();
 
-            if (stateMachine.Player.CombatIntentController != null &&
-                stateMachine.Player.CombatIntentController.IsAimHeld)
+            var combat = stateMachine.Player.CombatIntentController;
+
+            // В target mode sprint не держим.
+            if (combat != null && combat.IsTargetModeHeld)
             {
                 stateMachine.ReusableData.ShouldSprint = false;
                 keepSprinting = false;

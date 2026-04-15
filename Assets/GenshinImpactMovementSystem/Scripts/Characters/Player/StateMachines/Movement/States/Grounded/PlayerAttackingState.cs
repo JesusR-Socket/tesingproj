@@ -33,7 +33,7 @@ namespace GenshinImpactMovementSystem
 
             bool useCommitAttack =
                 stateMachine.Player.CombatIntentController != null &&
-                stateMachine.Player.CombatIntentController.ConsumeAimCommitAttack();
+                stateMachine.Player.CombatIntentController.ConsumeCommitAttack();
 
             currentAttackHash = useCommitAttack
                 ? stateMachine.Player.AnimationData.Attack1StateHash
@@ -41,25 +41,22 @@ namespace GenshinImpactMovementSystem
 
             currentAttackStateShortName = useCommitAttack ? "Attack1" : "ShortAttack";
 
-            // Важно: не даём locomotion/update перетирать атаку.
-            stateMachine.Player.Animator.CrossFadeInFixedTime(currentAttackHash, 0.05f, -1);
+            stateMachine.Player.Animator.CrossFadeInFixedTime(currentAttackHash, 0.05f, 0);
         }
 
         public override void HandleInput()
         {
-            // Пока идёт удар, не пропускаем новый movement input в locomotion.
             stateMachine.ReusableData.MovementInput = Vector2.zero;
         }
 
         public override void Update()
         {
-            // base.Update() здесь не вызываем специально,
-            // чтобы aim locomotion/blend tree не перетирали атакующий state.
             TryFinishAttack();
         }
 
         public override void PhysicsUpdate()
         {
+            base.PhysicsUpdate(); // Float остаётся активным
             DecelerateHorizontally();
         }
 

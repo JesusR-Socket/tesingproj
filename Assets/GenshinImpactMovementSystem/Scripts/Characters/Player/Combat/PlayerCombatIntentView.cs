@@ -38,11 +38,11 @@ namespace GenshinImpactMovementSystem
             intentPoint.gameObject.SetActive(true);
             intentLine.gameObject.SetActive(true);
 
-            bool showTriangle = controller.IsAimHeld;
+            bool showTriangle = controller.IsTargetModeHeld;
             triangleLine.gameObject.SetActive(showTriangle);
 
             if (showTriangle)
-                DrawTriangle(controller.GetTrianglePosition(), controller.CharacterFacing);
+                DrawTriangle(controller.GetTrianglePosition(), controller.GetTriangleFacing());
         }
 
         private void DrawIntentLine(Vector3 center)

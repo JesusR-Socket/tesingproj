@@ -118,7 +118,7 @@ namespace GenshinImpactMovementSystem
 
         protected virtual void OnDashStarted(InputAction.CallbackContext context)
         {
-            // Shift больше не делает dash.
+            // Dash не на Shift.
         }
 
         protected virtual void OnJumpStarted(InputAction.CallbackContext context)
@@ -130,9 +130,7 @@ namespace GenshinImpactMovementSystem
         {
             var combat = stateMachine.Player.CombatIntentController;
 
-            // Без ПКМ — бьём только вперёд по персонажу.
-            // С ПКМ — поворачиваемся к полоске.
-            if (combat != null && combat.IsAimHeld)
+            if (combat != null && combat.ShouldAttacksUseIntent())
                 combat.CommitIntentToCharacter();
 
             stateMachine.ChangeState(stateMachine.AttackingState);
@@ -142,13 +140,11 @@ namespace GenshinImpactMovementSystem
         {
             var combat = stateMachine.Player.CombatIntentController;
 
-            // Без ПКМ — Attack1 тоже только вперёд.
-            // С ПКМ — Attack1 по полоске.
-            if (combat != null && combat.IsAimHeld)
+            if (combat != null && combat.ShouldAttacksUseIntent())
                 combat.CommitIntentToCharacter();
 
             if (combat != null)
-                combat.PrepareAimCommitAttack();
+                combat.PrepareCommitAttack();
 
             stateMachine.ChangeState(stateMachine.AttackingState);
         }
@@ -227,11 +223,11 @@ namespace GenshinImpactMovementSystem
 
             base.OnMovementPerformed(context);
 
-            if (stateMachine.Player.CombatIntentController != null &&
-                stateMachine.Player.CombatIntentController.IsAimHeld)
-            {
+            var combat = stateMachine.Player.CombatIntentController;
+
+            // Только base mode вращается как оригинальный repo.
+            if (combat != null && combat.IsTargetModeHeld)
                 return;
-            }
 
             UpdateTargetRotation(GetMovementInputDirection());
         }
@@ -268,12 +264,6 @@ namespace GenshinImpactMovementSystem
 
         private bool TryDoubleTapDash(Vector2 rawInput)
         {
-            if (stateMachine.Player.CombatIntentController != null &&
-                stateMachine.Player.CombatIntentController.IsAimHeld)
-            {
-                return false;
-            }
-
             Vector2 tapDirection = GetSingleKeyTapDirection(rawInput);
 
             if (tapDirection == Vector2.zero)
