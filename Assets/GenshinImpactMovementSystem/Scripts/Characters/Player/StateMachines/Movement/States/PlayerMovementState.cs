@@ -156,14 +156,8 @@ namespace GenshinImpactMovementSystem
 
         protected virtual bool ShouldUseCameraRelativeMovement()
         {
-            var combat = stateMachine.Player.CombatIntentController;
-
-            if (combat == null)
-                return true;
-
-            // Base mode = original repo movement относительно камеры.
-            // Shift mode = target movement относительно facing персонажа.
-            return !combat.IsTargetModeHeld;
+            // » base mode, и Shift Freelook используют camera-relative направление движени€.
+            return true;
         }
 
         protected float UpdateTargetRotation(Vector3 direction, bool shouldConsiderCameraRotation = true)
@@ -239,7 +233,7 @@ namespace GenshinImpactMovementSystem
         {
             var combat = stateMachine.Player.CombatIntentController;
 
-            // Shift mode сам поворачивает персонажа в controller.
+            // ¬ Shift Freelook тело Ќ≈ поворачиваетс€ за камерой/полоской.
             if (combat != null && combat.IsTargetModeHeld)
                 return;
 

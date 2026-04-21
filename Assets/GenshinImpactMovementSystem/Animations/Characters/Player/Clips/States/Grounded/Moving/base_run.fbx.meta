@@ -1,5 +1,5 @@
 fileFormatVersion: 2
-guid: 185695db387e7374aaba1b1bf245dfef
+guid: 53524a76d1e68a04a8bc58ec9d70f670
 ModelImporter:
   serializedVersion: 24200
   internalIDToNameTable: []
@@ -31,19 +31,19 @@ ModelImporter:
     extraUserProperties: []
     clipAnimations:
     - serializedVersion: 16
-      name: IDLE
-      takeName: Armature|IDLE
-      internalID: 2876981554226286365
+      name: RUN
+      takeName: Armature|RUN
+      internalID: 4320190742753381013
       firstFrame: 0
-      lastFrame: 60
+      lastFrame: 18
       wrapMode: 0
-      orientationOffsetY: 0
+      orientationOffsetY: -50
       level: 0
       cycleOffset: 0
       loop: 0
       hasAdditiveReferencePose: 0
       loopTime: 1
-      loopBlend: 0
+      loopBlend: 1
       loopBlendOrientation: 1
       loopBlendPositionY: 1
       loopBlendPositionXZ: 1

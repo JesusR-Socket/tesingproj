@@ -41,7 +41,8 @@ namespace GenshinImpactMovementSystem
 
             currentAttackStateShortName = useCommitAttack ? "Attack1" : "ShortAttack";
 
-            stateMachine.Player.Animator.CrossFadeInFixedTime(currentAttackHash, 0.05f, 0);
+            // ВАЖНО: не указываем layer 0, чтобы Animator сам нашёл нужный слой.
+            stateMachine.Player.Animator.CrossFadeInFixedTime(currentAttackHash, 0.05f);
         }
 
         public override void HandleInput()
@@ -56,7 +57,10 @@ namespace GenshinImpactMovementSystem
 
         public override void PhysicsUpdate()
         {
-            base.PhysicsUpdate(); // Float остаётся активным
+            // Оставляем grounded physics, чтобы не проваливаться в пол
+            base.PhysicsUpdate();
+
+            // И одновременно жёстко гасим попытку двигаться
             DecelerateHorizontally();
         }
 
@@ -96,6 +100,18 @@ namespace GenshinImpactMovementSystem
                 {
                     stateInfo = currentState;
                     return true;
+                }
+
+                if (animator.IsInTransition(layer))
+                {
+                    AnimatorStateInfo nextState = animator.GetNextAnimatorStateInfo(layer);
+
+                    if (nextState.IsName(currentAttackStateShortName) ||
+                        nextState.IsName("Base Layer." + currentAttackStateShortName))
+                    {
+                        stateInfo = nextState;
+                        return true;
+                    }
                 }
             }
 

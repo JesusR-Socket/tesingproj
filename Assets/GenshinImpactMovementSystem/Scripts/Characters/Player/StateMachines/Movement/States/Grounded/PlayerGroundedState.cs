@@ -116,6 +116,39 @@ namespace GenshinImpactMovementSystem
             stateMachine.Player.Input.PlayerActions.CommitAttack.started -= OnCommitAttackStarted;
         }
 
+        private bool IsAnyAttackPlaying()
+        {
+            Animator animator = stateMachine.Player.Animator;
+
+            for (int layer = 0; layer < animator.layerCount; layer++)
+            {
+                AnimatorStateInfo currentState = animator.GetCurrentAnimatorStateInfo(layer);
+
+                if (currentState.IsName("Attack1") ||
+                    currentState.IsName("Base Layer.Attack1") ||
+                    currentState.IsName("ShortAttack") ||
+                    currentState.IsName("Base Layer.ShortAttack"))
+                {
+                    return true;
+                }
+
+                if (animator.IsInTransition(layer))
+                {
+                    AnimatorStateInfo nextState = animator.GetNextAnimatorStateInfo(layer);
+
+                    if (nextState.IsName("Attack1") ||
+                        nextState.IsName("Base Layer.Attack1") ||
+                        nextState.IsName("ShortAttack") ||
+                        nextState.IsName("Base Layer.ShortAttack"))
+                    {
+                        return true;
+                    }
+                }
+            }
+
+            return false;
+        }
+
         protected virtual void OnDashStarted(InputAction.CallbackContext context)
         {
             // Dash не на Shift.
@@ -128,6 +161,9 @@ namespace GenshinImpactMovementSystem
 
         protected virtual void OnAttackStarted(InputAction.CallbackContext context)
         {
+            if (IsAnyAttackPlaying())
+                return;
+
             var combat = stateMachine.Player.CombatIntentController;
 
             if (combat != null && combat.ShouldAttacksUseIntent())
@@ -138,6 +174,9 @@ namespace GenshinImpactMovementSystem
 
         protected virtual void OnCommitAttackStarted(InputAction.CallbackContext context)
         {
+            if (IsAnyAttackPlaying())
+                return;
+
             var combat = stateMachine.Player.CombatIntentController;
 
             if (combat != null && combat.ShouldAttacksUseIntent())

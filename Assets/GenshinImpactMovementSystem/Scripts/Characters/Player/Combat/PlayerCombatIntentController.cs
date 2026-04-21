@@ -6,8 +6,8 @@ namespace GenshinImpactMovementSystem
     public class PlayerCombatIntentController : MonoBehaviour
     {
         [Header("Target Mode")]
-        [SerializeField] private float targetModeCameraBehindSmoothTime = 0.07f;
-        [SerializeField] private float targetModeTurnSmoothTime = 0.05f;
+        [SerializeField] private float middleMouseRecenterSmoothTime = 0.07f;
+        [SerializeField] private float middleMouseRecenterFinishThreshold = 0.75f;
 
         [Header("Intent Raycast")]
         [SerializeField] private LayerMask aimSurfaceLayers = ~0;
@@ -25,11 +25,15 @@ namespace GenshinImpactMovementSystem
         public Vector3 IntentWorldPoint { get; private set; }
         public float VerticalIntentDelta { get; private set; }
 
+        public Vector3 TargetModeAnchorFacing { get; private set; }
+
         private Player player;
         private InputAction targetModeAction;
 
         private bool nextAttackUsesCommitAttack;
-        private float targetModeYawVelocity;
+
+        private bool isMiddleMouseRecentering;
+        private float middleMouseTargetYaw;
 
         private void Awake()
         {
@@ -62,7 +66,13 @@ namespace GenshinImpactMovementSystem
             UpdateIntentFromCamera();
 
             if (IsTargetModeHeld)
-                UpdateTargetModeFollow();
+            {
+                HandleMiddleMouseRecentering();
+            }
+            else
+            {
+                isMiddleMouseRecentering = false;
+            }
         }
 
         private Vector3 NormalizePlanar(Vector3 vector, Vector3 fallback)
@@ -92,9 +102,17 @@ namespace GenshinImpactMovementSystem
             IntentFacing = NormalizePlanar(facing, CharacterFacing);
         }
 
+        private void SetTargetModeAnchorFacing(Vector3 facing)
+        {
+            TargetModeAnchorFacing = NormalizePlanar(facing, CharacterFacing);
+        }
+
         private void CacheCharacterFacing()
         {
             SetCharacterFacing(player.transform.forward);
+
+            if (TargetModeAnchorFacing.sqrMagnitude < 0.0001f)
+                SetTargetModeAnchorFacing(CharacterFacing);
         }
 
         private float GetYawFromFacing(Vector3 facing)
@@ -131,41 +149,42 @@ namespace GenshinImpactMovementSystem
             IntentWorldPoint = player.transform.position + IntentFacing * markerDistance;
         }
 
-        private void UpdateTargetModeFollow()
+        private void HandleMiddleMouseRecentering()
         {
-            float targetCameraYaw = GetYawFromFacing(CharacterFacing);
-            player.CameraRecenteringUtility.SmoothSetYaw(targetCameraYaw, targetModeCameraBehindSmoothTime);
+            if (Mouse.current != null && Mouse.current.middleButton.wasPressedThisFrame)
+            {
+                middleMouseTargetYaw = GetYawFromFacing(TargetModeAnchorFacing);
+                isMiddleMouseRecentering = true;
+            }
 
-            float currentYaw = player.transform.eulerAngles.y;
-            float targetYaw = GetYawFromFacing(IntentFacing);
+            if (!isMiddleMouseRecentering)
+                return;
 
-            float newYaw = Mathf.SmoothDampAngle(
-                currentYaw,
-                targetYaw,
-                ref targetModeYawVelocity,
-                targetModeTurnSmoothTime
+            float currentYaw = player.CameraRecenteringUtility.GetCurrentYaw();
+
+            player.CameraRecenteringUtility.SmoothSetYaw(
+                middleMouseTargetYaw,
+                middleMouseRecenterSmoothTime
             );
 
-            Quaternion rotation = Quaternion.Euler(0f, newYaw, 0f);
-            transform.rotation = rotation;
-
-            if (player.Rigidbody != null)
-                player.Rigidbody.MoveRotation(rotation);
-
-            SetCharacterFacing(rotation * Vector3.forward);
+            if (Mathf.Abs(Mathf.DeltaAngle(currentYaw, middleMouseTargetYaw)) <= middleMouseRecenterFinishThreshold)
+            {
+                player.CameraRecenteringUtility.SetYawImmediate(middleMouseTargetYaw);
+                isMiddleMouseRecentering = false;
+            }
         }
 
         private void OnTargetModeStarted(InputAction.CallbackContext context)
         {
             IsTargetModeHeld = true;
-
-            float targetYaw = GetYawFromFacing(CharacterFacing);
-            player.CameraRecenteringUtility.SmoothSetYaw(targetYaw, targetModeCameraBehindSmoothTime);
+            SetTargetModeAnchorFacing(CharacterFacing);
+            isMiddleMouseRecentering = false;
         }
 
         private void OnTargetModeCanceled(InputAction.CallbackContext context)
         {
             IsTargetModeHeld = false;
+            isMiddleMouseRecentering = false;
         }
 
         public void PrepareCommitAttack()
@@ -182,11 +201,16 @@ namespace GenshinImpactMovementSystem
 
         public bool ShouldAttacksUseIntent()
         {
-            return IsTargetModeHeld;
+            // Shift теперь только Freelook с фиксацией направления.
+            // Атаки остаются по facing персонажа.
+            return false;
         }
 
         public Vector3 GetMovementReferenceFacing()
         {
+            if (IsTargetModeHeld)
+                return TargetModeAnchorFacing;
+
             return CharacterFacing;
         }
 
@@ -206,13 +230,18 @@ namespace GenshinImpactMovementSystem
 
         public Vector3 GetTriangleFacing()
         {
+            if (IsTargetModeHeld)
+                return TargetModeAnchorFacing;
+
             return CharacterFacing;
         }
 
         public Vector3 GetTrianglePosition()
         {
+            Vector3 triangleFacing = GetTriangleFacing();
+
             return player.transform.position
-                   + CharacterFacing * markerDistance
+                   + triangleFacing * markerDistance
                    + Vector3.up * markerHeight;
         }
 
